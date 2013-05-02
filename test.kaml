@@ -1,0 +1,67 @@
+-use html.*
+
+$bar
+${bar.bat}
+
+{bar}
+{bar.bat}
+
+-fn element tag #id .classes [attrs] needsClosing = false body {
+	'<$tag '
+	-set attrs['id'] = id
+	-set attrs['class'] += ' ' + classes
+	['$k="{escape(v)}"' for k, v in attrs]
+	'>$body</$tag>'
+}
+
+-fn div (args) {
+	element 'div' (args);
+}
+
+-fn alert *args {
+	div(class = ['alert', type]) {
+		img "images/${type}.jpg";
+		h4 title;
+		text body;
+	}
+}
+
+fn foo(f) {
+	f {
+		{alert}
+	}
+}
+
+div
+	#foo
+	.bar
+	.baz
+	[type="foo", type2="asdf"]
+	
+	arg1,
+	arg2,
+	arg3
+{
+	
+}
+
+-fn div #foo (x y z) [a, b, c = 2] {
+	
+}
+
+div #x (foo=1 bar=2 baz) [1, 2];
+
+alert '{}, {}'.format(1, 2) {
+	html.title = "Make sure the fee is correct before creating the invoices";
+	body = markdown {{
+		Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+		Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+		when an unknown printer took a galley of type and scrambled it to make a type specimen book.
+		It has survived not only five centuries, but also the leap into electronic typesetting,
+		remaining essentially unchanged. It was popularised in the 1960s with the release of
+		Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing
+		software like Aldus PageMaker including versions of Lorem Ipsum.
+	}};
+}
+
+h3 {}
