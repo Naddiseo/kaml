@@ -1,12 +1,13 @@
-from ply import lex
+from ply import lex, yacc
 # Influence from pycparser, and aptana's CSS.bnf
 
 class Lexer(object):
-	tokens = list("'\"=.,/[]{}|\\!$%^&*()-=+?:;<>")
 	
 	def __init__(self, **kwargs):
 		self.lexer = lex.lex(module = self, **kwargs)
-	
+		
+		self.nesting = 0
+		
 	def tokenize(self, data):
 		self.lexer.input(data)
 		while True:
@@ -55,60 +56,64 @@ class Lexer(object):
 	]
 	tokens = reserved_words + other_symbols 
 	
-	t_LTE = r'<='
-	t_GTE = r'>='
-	t_EQ = r'=='
-	t_NE = r'!='
-	t_AND = r'&&'
-	t_OR = r'\|\|'
-	t_SHL = r'<<'
-	t_SHR = r'>>'
-	t_ADDEQ = r'\+='
-	t_SUBEQ = r'\-='
-	t_MULEQ = r'\*='
-	t_DIVEQ = r'/='
-	t_MODEQ = r'%='
-	t_SHLEQ = r'<<='
-	t_SHREQ = r'>>='
-	t_ANDEQ = r'&='
-	t_XOREQ = r'^='
-	t_OREQ = r'\|='
+	t_INITIAL_variablestring_LTE = r'<='
+	t_INITIAL_variablestring_GTE = r'>='
+	t_INITIAL_variablestring_EQ = r'=='
+	t_INITIAL_variablestring_NE = r'!='
+	t_INITIAL_variablestring_AND = r'&&'
+	t_INITIAL_variablestring_OR = r'\|\|'
+	t_INITIAL_variablestring_SHL = r'<<'
+	t_INITIAL_variablestring_SHR = r'>>'
+	t_INITIAL_variablestring_ADDEQ = r'\+='
+	t_INITIAL_variablestring_SUBEQ = r'\-='
+	t_INITIAL_variablestring_MULEQ = r'\*='
+	t_INITIAL_variablestring_DIVEQ = r'/='
+	t_INITIAL_variablestring_MODEQ = r'%='
+	t_INITIAL_variablestring_SHLEQ = r'<<='
+	t_INITIAL_variablestring_SHREQ = r'>>='
+	t_INITIAL_variablestring_ANDEQ = r'&='
+	t_INITIAL_variablestring_XOREQ = r'^='
+	t_INITIAL_variablestring_OREQ = r'\|='
 	
-	t_WS = r'[\t ]'
+	t_INITIAL_variablestring_WS = r'[\t ]'
 	
 	
 	states = (
-		('string_sg', 'inclusive'),
-		('string_dbl', 'inclusive'),
-		('variable_string', 'inclusive'),
+		('stringsg', 'exclusive'),
+		('stringdbl', 'exclusive'),
+		('variablestring', 'exclusive'),
 	)
 	
-	def t_NL(self, t):
+	def t_ANY_NL(self, t):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
+		t.type = 'WS'
+		return t
 	
-	def t_ID(self, t):
-		r'\-?[a-zA-Z_\-][a-zA-Z_0-9\-]*'
+	def t_INITIAL_variablestring_ID(self, t):
+		r'[a-zA-Z_\-][a-zA-Z_0-9\-]*'
 		if t.value in self.reserved:
 			t.type = self.reserved[t.value]
 		return t
 	
-	def t_INT_LIT(self, t):
+	def t_INITIAL_variablestring_INT_LIT(self, t):
 		r'[1-9][0-9]*'
 		t.value = int(t.value)
 		return t
 	
-	def t_FLOAT_LIT(self, t):
+	def t_INITIAL_variablestring_FLOAT_LIT(self, t):
 		r'[0-9]+\.[0-9]+'
 		t.value = float(t.value)
 		return t
 	
-	def t_STRING_BEGIN(self, t):
+	def t_INITIAL_variablestring_STRING_BEGIN(self, t):
 		r'[\'"]'
 		if t.value == "'":
-			self.lexer.push_state('string_sg')
+			print("Starting SG")
+			self.lexer.push_state('stringsg')
 		elif t.value == '"':
-			self.lexer.push_state('string_dbl')
+			print("Starting DBL")
+			self.lexer.push_state('stringdbl')
 		
 	# Strings =====
 	rx_nonascii = r'[^\0-\177]'
@@ -119,7 +124,60 @@ class Lexer(object):
 	rx_string_sg = r'([^\n\r\f\\\']|\\{} | {})*'.format(rx_n1, rx_escape)
 	
 	
-	def t_string_sg_SIMPLE_VAR(self, t):
-		r = '\$'
+	def t_stringsg_stringdbl_SIMPLE_VAR(self, t):
+		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
+		t.type = 'ID'
+		print("Simple var :".format(t.value))
+		return t
+	
+	
+	def t_stringsg_stringdbl_VAR_STRING_START(self, t):
+		r'\{(?!\{)'
+		print("Starting VARSTRING")
+		self.nesting += 1
+		self.lexer.push_state('variablestring')
+	
+	def t_stringsg_STRING_END_Q(self, t):
+		r'\''
+		print("Ending SG")
+		self.lexer.pop_state()
+		
+	def t_stringdbl_STRING_END_Q(self, t):
+		r'"'
+		print("Ending DBL")
+		self.lexer.pop_state()
+	
+	def t_stringsg_stringdbl_INNER(self, t):
+		r'[^\{]+'
+		t.type = 'STRING_LIT'
+		return t
+	
+#	def t_stringsg_stringdbl_STRING_END(self, t):
+#		r'\}(?!\{)'
+#		print("Ending ")
+#		self.lexer.pop_state()
+#	
+
+	def t_variablestring_LBRACE(self, t):
+		r'\{'
+		self.nesting += 1
+		t.type = '{'
+		return t
+	
+	def t_variablestring_END(self, t):
+		r'\}'
+		
+		self.nesting -= 1
+		print("nesting={}".format(self.nesting))
+		if self.nesting == 0:
+			print("Ending VARSTR")
+			self.lexer.pop_state()
+	
+#	def t_variablestring_START(self, t):
+#		r'.'
+#		t.type = 'STRING_LIT'
+#		return t
+	
+	
 	
 	# End Strings ====

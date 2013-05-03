@@ -1,3 +1,3 @@
 run:
 	clear
-	python main.py test.kaml
+	python main.py test1.kaml
