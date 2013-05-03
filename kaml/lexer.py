@@ -1,18 +1,38 @@
-from ply import lex, yacc
+from __future__ import unicode_literals
+import re, sys
+
+from ply import lex
 # Influence from pycparser, and aptana's CSS.bnf
 
 class Lexer(object):
 	
 	def __init__(self, **kwargs):
-		self.lexer = lex.lex(module = self, **kwargs)
-		
+		self.log = lex.PlyLogger(sys.stderr)
+		self.lexer = lex.lex(module = self, reflags = re.U, debuglog = self.log, **kwargs)
+		self.lexer.lextokens['{'] = 1
+		self.lexer.lextokens['}'] = 1
 		self.nesting = 0
+		self.rnesting = 0 # for raw strings
 		
 	def tokenize(self, data):
 		self.lexer.input(data)
 		while True:
 			tok = self.lexer.token()
+				
 			if tok:
+				value = ''
+				lineno = tok.lineno
+				lexpos = tok.lexpos
+				while tok and tok.type == 'STRING_LIT':
+					value += tok.value
+					tok = self.lexer.token()
+				else:
+					if len(value) > 0:
+						tok = lex.LexToken()
+						tok.type = 'STRING_LIT'
+						tok.value = value
+						tok.lineno = lineno
+						tok.lexpos = lexpos
 				yield tok
 			else:
 				break
@@ -23,6 +43,19 @@ class Lexer(object):
 	
 	def _make_tok_location(self, token):
 		return (token.lineno, self.find_tok_column(token))
+	
+	def push(self, s):
+		t = '-' * len(self.lexer.lexstatestack)
+		self.log.debug("{}Starting {}".format(t, s))
+		self.lexer.push_state(s)
+	
+	def pop(self):
+		t = '-' * (len(self.lexer.lexstatestack) - 1)
+		current = self.lexer.current_state()
+		self.lexer.pop_state()
+		following = self.lexer.current_state()
+		self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
+		
 	
 	reserved = {k.strip() : k.strip().replace('-', '').upper() for k in """
 	-fn -set -for -if -elif -else -use -while -continue -break
@@ -42,7 +75,8 @@ class Lexer(object):
 		'GTE', 'LTE', 'EQ', 'NE', 'GT', 'LT',
 		
 		# Separater
-		'WS'
+		'WS',
+		
 	]
 	
 	literals = [
@@ -82,9 +116,22 @@ class Lexer(object):
 		('stringsg', 'exclusive'),
 		('stringdbl', 'exclusive'),
 		('variablestring', 'exclusive'),
+		('rawstr', 'exclusive'),
 	)
 	
-	def t_ANY_NL(self, t):
+	def t_error(self, t):
+		print("Error")
+	
+	def t_stringsg_stringdbl_error(self, t):
+		print("Error in String")
+	
+	def t_variablestring_error(self, t):
+		print("Error in var string")
+	
+	def t_rawstr_error(self, t):
+		print("Error in rawstr")
+	
+	def t_INITIAL_variablestring_NL(self, t):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
 		t.type = 'WS'
@@ -109,55 +156,15 @@ class Lexer(object):
 	def t_INITIAL_variablestring_STRING_BEGIN(self, t):
 		r'[\'"]'
 		if t.value == "'":
-			print("Starting SG")
-			self.lexer.push_state('stringsg')
+			self.push('stringsg')
 		elif t.value == '"':
-			print("Starting DBL")
-			self.lexer.push_state('stringdbl')
-		
-	# Strings =====
-	rx_nonascii = r'[^\0-\177]'
-	rx_unicode = r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])?'
-	rx_escape = r'{} | \\[^\n\r\f0-9a-fA-F]'.format(rx_unicode)
-	rx_n1 = r'\n |\r\n |\r |\f'
-	rx_string_dbl = r'([^\n\r\f\\"]|\\{} | {})*'.format(rx_n1, rx_escape)
-	rx_string_sg = r'([^\n\r\f\\\']|\\{} | {})*'.format(rx_n1, rx_escape)
+			self.push('stringdbl')
 	
+	def t_INITIAL_variablestring_RAWBLOCK_BEGIN(self, t):
+		r'\{\{'
+		self.push('rawstr')
 	
-	def t_stringsg_stringdbl_SIMPLE_VAR(self, t):
-		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
-		t.type = 'ID'
-		print("Simple var :".format(t.value))
-		return t
-	
-	
-	def t_stringsg_stringdbl_VAR_STRING_START(self, t):
-		r'\{(?!\{)'
-		print("Starting VARSTRING")
-		self.nesting += 1
-		self.lexer.push_state('variablestring')
-	
-	def t_stringsg_STRING_END_Q(self, t):
-		r'\''
-		print("Ending SG")
-		self.lexer.pop_state()
-		
-	def t_stringdbl_STRING_END_Q(self, t):
-		r'"'
-		print("Ending DBL")
-		self.lexer.pop_state()
-	
-	def t_stringsg_stringdbl_INNER(self, t):
-		r'[^\{]+'
-		t.type = 'STRING_LIT'
-		return t
-	
-#	def t_stringsg_stringdbl_STRING_END(self, t):
-#		r'\}(?!\{)'
-#		print("Ending ")
-#		self.lexer.pop_state()
-#	
-
+	# Variable interpolation
 	def t_variablestring_LBRACE(self, t):
 		r'\{'
 		self.nesting += 1
@@ -166,18 +173,91 @@ class Lexer(object):
 	
 	def t_variablestring_END(self, t):
 		r'\}'
+		t.type = '}'
 		
 		self.nesting -= 1
-		print("nesting={}".format(self.nesting))
+		
 		if self.nesting == 0:
-			print("Ending VARSTR")
-			self.lexer.pop_state()
+			self.pop()
+		
+		if len(self.lexer.lexstatestack) > 1:
+			if self.lexer.lexstatestack[-1] not in ('rawstr',):
+				return t
+		
+		#return t
+	# End Variable Interpolation ========
+	def t_stringsg_stringdbl_rawstr_NL(self, t):
+		r'\n+'
+		self.lexer.lineno += len(t.value)
+		t.type = 'STRING_LIT'
+		return t
+		
+	def t_rawstr_INNER(self, t):
+		r'[^\{\}]+'
+		t.type = 'STRING_LIT'
+		#self.log.debug('rawstr inner')
+		return t
 	
-#	def t_variablestring_START(self, t):
-#		r'.'
-#		t.type = 'STRING_LIT'
-#		return t
+	
+	def t_rawstr_INNER2(self, t):
+		r'\}(?!\})'
+		t.type = 'STRING_LIT'
+		return t
+	
+	def t_rawstr_ESCAPED_BRACE(self, t):
+		r'\{\{'
+		self.rnesting += 1
+		t.value = '{'
+		t.type = 'STRING_LIT'
+		#self.log.debug('Escaped brace "{"')
+		return t
+	
+	def t_rawstr_END(self, t):
+		r'\}\}'
+		
+		t.value = '}'
+		t.type = 'STRING_LIT'
+			
+		if self.rnesting == 0:
+			self.pop()
+		else:
+			self.rnesting -= 1
+			#self.log.debug('Escaped brace "}"')
+			return t
+	# Raw String Blocks
+	
+	# String Literals =====
+	
+	def t_stringsg_stringdbl_rawstr_ESCAPE_CHAR(self, t):
+		r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])? | \\[^\n\r\f0-9a-fA-F]'
+		t.type = 'STRING_LIT'
+		self.lexer.lineno += t.value.count('\n')
+		return t
+		
+	
+	def t_stringsg_stringdbl_rawstr_SIMPLE_VAR(self, t):
+		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
+		t.type = 'ID'
+		self.log.debug("Simple var :".format(t.value))
+		return t
 	
 	
+	def t_stringsg_stringdbl_rawstr_VAR_STRING_START(self, t):
+		r'\{(?!\{)'
+		self.nesting += 1
+		self.push('variablestring')
 	
+	def t_stringsg_STRING_END_Q(self, t):
+		r'\''
+		self.pop()
+		
+	def t_stringdbl_STRING_END_Q(self, t):
+		r'"'
+		self.pop()
+	
+	def t_stringsg_stringdbl_INNER(self, t):
+		r'[^\{]+'
+		t.type = 'STRING_LIT'
+		self.log.debug('inner')
+		return t
 	# End Strings ====
