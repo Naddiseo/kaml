@@ -13,102 +13,114 @@ class Lexer(object):
 		self.lexer.lextokens['}'] = 1
 		self.nesting = 0
 		self.rnesting = 0# for raw strings
+		self.tok_stack = []
+	
+	def _get_token(self):
+		if len(self.tok_stack):
+			return self.tok_stack.pop(0)
+		return self.lexer.token()
+	
+	def _push_token(self, t):
+		self.tok_stack.append(t)
 		
 	def tokenize(self, data):
 		self.lexer.input(data)
 		while True:
-			tok = self.lexer.token()
+			tok = self._get_token()
 				
 			if tok:
-				lineno = tok.lineno
-				lexpos = tok.lexpos
-				
-				# String literals concatenate when next to each other
-				if tok.type in 'STRING_LIT':
-					stack = []
-					# Any whitespace between string_literals can be forgotten
-					while tok and tok.type in ('STRING_LIT', 'WS'):
-						stack.append(tok)
-						tok = self.lexer.token()
-					
-					if len(stack):
-						# Since `stack` is only strings and WS, we can divide it into
-						# three sections:
-						#  1 - Initial Whitespace
-						#  2 - Final Whitespace
-						#  3 - All tokens inbetween
-						# The initial and final whitespace can be concatenated into
-						# just one or zero whitespace tokens on each end
-						# then all whitespace in the middle can be dropped, and then
-						# all strings concatenated
-						
-						# Step 1: Concatenate initial whitespace
-						stack = self._concat_ws_tokens(stack, 0)
-						
-						# Step 2: Concatenate final whitespace
-						if stack[-1].type == 'WS':
-							offset = len(stack) - 1
-							for i in reversed(xrange(0, len(stack))):
-								if stack[i].type == 'STRING_LIT':
-									offset = i 
-									break
-							stack = self._concat_ws_tokens(stack, offset)
-						
-						# At this point, there should only be an optional WS token
-						# at the beginning and end
-						l = len(stack)
-						
-						if l > 1:
-							start = 0
-							end = l
-							if stack[0].type == 'WS':
-								start = 1
-							if stack[-1].type == 'WS':
-								end = l - 1
-							
-							s_tok = lex.LexToken()
-							s_tok.type = 'STRING_LIT'
-							s_tok.value = ''
-							s_tok.lineno = stack[start].lineno
-							s_tok.lexpos = stack[start].lexpos
-							
-							last_tok = None
-							
-							for i in xrange(start, end):
-								last_tok = stack[i]
-								if last_tok.type == 'STRING_LIT':
-									s_tok.value += last_tok.value
-							
-							assert last_tok.type == 'STRING_LIT'
-							stack_begin = stack[:start]
-							stack_end = stack[end + 1:]
-							stack = stack_begin + [s_tok] + stack_end
-						# Now yield the modified stack
-						for t in stack:
-							yield t
-					
-					if not tok:
-						break
-					# then fall through and yield the last non-string/ws token
+				if tok.type == 'STRING_LIT':
+					for t in self._tokenize_string(tok):
+						yield t
+					continue
 					
 				elif tok.type == 'WS':
 					# Whitespace can also concatenate
 					ws_tok = lex.LexToken()
 					ws_tok.type = 'WS'
-					ws_tok.lineno = lineno
-					ws_tok.lexpos = lexpos
+					ws_tok.lineno = tok.lineno
+					ws_tok.lexpos = tok.lexpos
 					ws_tok.value = ''
 					while tok and tok.type == 'WS':
 						ws_tok.value += tok.value
-						tok = self.lexer.token()
+						tok = self._get_token()
 					
 					yield ws_tok
-					if not tok:
-						break
-					# then fall through and yield the last non-ws token
-				yield tok
+					self._push_token(tok)
+				else:
+					yield tok
 			else:
 				break
+	
+	
+	def _tokenize_string(self, tok):
+		
+		# String literals concatenate when next to each other
+		if tok.type in 'STRING_LIT':
+			stack = []
+			# Any whitespace between string_literals can be forgotten
+			while tok and tok.type in ('STRING_LIT', 'WS'):
+				stack.append(tok)
+				tok = self._get_token()
+			
+			if len(stack):
+				# Since `stack` is only strings and WS, we can divide it into
+				# three sections:
+				#  1 - Initial Whitespace
+				#  2 - Final Whitespace
+				#  3 - All tokens inbetween
+				# The initial and final whitespace can be concatenated into
+				# just one or zero whitespace tokens on each end
+				# then all whitespace in the middle can be dropped, and then
+				# all strings concatenated
+				
+				# Step 1: Concatenate initial whitespace
+				stack = self._concat_ws_tokens(stack, 0)
+				
+				# Step 2: Concatenate final whitespace
+				if stack[-1].type == 'WS':
+					offset = len(stack) - 1
+					for i in reversed(xrange(0, len(stack))):
+						if stack[i].type == 'STRING_LIT':
+							offset = i + 1
+							break
+					stack = self._concat_ws_tokens(stack, offset)
+				
+				# At this point, there should only be an optional WS token
+				# at the beginning and end
+				l = len(stack)
+				
+				if l > 1:
+					start = 0
+					end = l
+					if stack[0].type == 'WS':
+						start = 1
+					if stack[-1].type == 'WS':
+						end = l - 1
+					
+					s_tok = lex.LexToken()
+					s_tok.type = 'STRING_LIT'
+					s_tok.value = ''
+					s_tok.lineno = stack[start].lineno
+					s_tok.lexpos = stack[start].lexpos
+					
+					last_tok = None
+					
+					for i in xrange(start, end):
+						last_tok = stack[i]
+						if last_tok.type == 'STRING_LIT':
+							s_tok.value += last_tok.value
+					
+					assert last_tok.type == 'STRING_LIT'
+					stack_begin = stack[:start]
+					stack_end = stack[end :]
+					stack = stack_begin + [s_tok] + stack_end
+				# Now yield the modified stack
+				for t in stack:
+					yield t
+		
+		if tok:
+			yield tok
 	
 	def _concat_ws_tokens(self, tokens, offset):
 		start_offset = offset
@@ -119,8 +131,8 @@ class Lexer(object):
 			value = ''
 			while tok and tok.type == 'WS':
 				value += tok.value
-				if offset + 1 < l:
-					offset += 1
+				offset += 1
+				if offset < l:
 					tok = tokens[offset]
 				else:
 					break
@@ -132,7 +144,7 @@ class Lexer(object):
 			tok.lexpos = tokens[start_offset].lexpos
 			
 			tokens_start = tokens[:start_offset]
-			tokens_end = tokens[offset + 1:]
+			tokens_end = tokens[offset:]
 			tokens = tokens_start + [tok] + tokens_end
 				
 		return tokens
@@ -186,7 +198,7 @@ class Lexer(object):
 		'~', '!', '^', '&', '|',
 		'(', ')', '{', '}', '[', ']',
 		'.', '?', ':', ';', ',',
-		'#', '$',
+		'#', '$', '\\',
 	]
 	tokens = reserved_words + other_symbols 
 	
@@ -331,6 +343,7 @@ class Lexer(object):
 	def t_stringsg_stringdbl_rawstr_ESCAPE_CHAR(self, t):
 		r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])? | \\[^\n\r\f0-9a-fA-F]'
 		t.type = 'STRING_LIT'
+		t.value = t.value[1:] # Remove the slash
 		self.lexer.lineno += t.value.count('\n')
 		return t
 		

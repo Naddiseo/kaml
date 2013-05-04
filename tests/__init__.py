@@ -4,6 +4,7 @@ import unittest
 from ply.lex import LexToken
 
 from kaml import Lexer
+from twisted.trial.test.test_assertions import AssertTrueTests
 
 class T(LexToken):
 	__slots__ = ('type', 'value', 'lineno', 'lexpos')
@@ -69,16 +70,23 @@ class Test(unittest.TestCase):
 	def setUp(self):
 		self.l = Lexer()
 	
-	def assertTokens(self, code, tokens = [], filter_ws = True, msg = None):
-		lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t.type != 'WS']
+	def assertTokens(self, code, tokens = [], filter_ws = False, msg = None):
+		if filter_ws:
+			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t.type != 'WS']
+		else:
+			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code))]
 		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens]
-		self.assertTokenLists(test_tokens, lexer_tokens, msg)
+		try:
+			self.assertTokenLists(test_tokens, lexer_tokens, msg)
+		except AssertionError:
+			print "For code `{}`".format(code)
+			raise
 	
 	def assertTokenLists(self, expected_tokens, actual_tokens, msg = None):
 		try:
 			self.assertEqual(len(expected_tokens), len(actual_tokens))
 		except AssertionError:
-			print("{}\n".format(expected_tokens, actual_tokens))
+			print("{}\n{}".format(expected_tokens, actual_tokens))
 			raise
 		
 		for expected, actual in zip(expected_tokens, actual_tokens):
@@ -88,7 +96,7 @@ class Test(unittest.TestCase):
 		code = "-fn -set -for -if -elif -else -use -while -continue -break or and true false"
 		tokens = [T(t.replace('-', '').upper()) for t in code.split()]
 		
-		self.assertTokens(code, tokens)
+		self.assertTokens(code, tokens, filter_ws = True)
 	
 	def test_stringsg(self):
 		tokens = [S('ABCD')]
@@ -99,10 +107,10 @@ class Test(unittest.TestCase):
 		self.assertTokens("'AB''CD'", tokens)
 		
 		# Concatenation with whitespace
-		self.assertTokens("\n'AB'\n 'CD'\n", [W('\n ')] + tokens + [W('\n ')])
+		self.assertTokens("\n'AB'\n 'CD'\n", [W('\n')] + tokens + [W('\n')],)
 		
 		# Test escaped quote
-		self.assertTokens('"\\\""', [S('"')])
+		self.assertTokens(r'"\""', [S('"')])
 	
 	def test_stringdbl(self):
 		tokens = [S('ABCD')]
@@ -115,7 +123,7 @@ class Test(unittest.TestCase):
 		# Concatenation with whitespace
 		self.assertTokens('\n "AB"\n "CD"\n ', [W('\n ')] + tokens + [W('\n ')])
 		# Test escaped quote
-		self.assertTokens("'\\\''", [S("'")])
+		self.assertTokens(r"'\''", [S("'")])
 	
 	def test_simple_interpolation(self):
 		# Simple var
@@ -129,8 +137,8 @@ class Test(unittest.TestCase):
 		self.assertTokens('"Hello $bar World', [S('Hello '), I('$bar'), S(' World')])
 		
 		# Curly var
-		self.assertTokens("'{bar}'", [I('$bar')])
-		self.assertTokens('"{bar}"', [I('$bar')])
+		self.assertTokens("'{bar}'", [I('bar')])
+		self.assertTokens('"{bar}"', [I('bar')])
 		self.assertTokens("'Hello {bar} World'", [S('Hello '), I('bar'), I(' World')])
 		self.assertTokens('"Hello {bar} World"', [S('Hello '), I('bar'), I(' World')])
 	
