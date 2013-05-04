@@ -26,6 +26,8 @@ class Lexer(object):
 				while tok and tok.type == 'STRING_LIT':
 					value += tok.value
 					tok = self.lexer.token()
+					while tok and tok.type in ('WS', 'NL'):
+						tok = self.lexer.token()
 				else:
 					if len(value) > 0:
 						tok = lex.LexToken()
@@ -256,7 +258,7 @@ class Lexer(object):
 		self.pop()
 	
 	def t_stringsg_stringdbl_INNER(self, t):
-		r'[^\{]+'
+		r'[^\{\'\"]+'
 		t.type = 'STRING_LIT'
 		self.log.debug('inner')
 		return t
