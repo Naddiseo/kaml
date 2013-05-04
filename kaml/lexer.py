@@ -20,24 +20,122 @@ class Lexer(object):
 			tok = self.lexer.token()
 				
 			if tok:
-				value = ''
 				lineno = tok.lineno
 				lexpos = tok.lexpos
-				while tok and tok.type == 'STRING_LIT':
-					value += tok.value
-					tok = self.lexer.token()
-					while tok and tok.type in ('WS', 'NL'):
+				
+				# String literals concatenate when next to each other
+				if tok.type in 'STRING_LIT':
+					stack = []
+					# Any whitespace between string_literals can be forgotten
+					while tok and tok.type in ('STRING_LIT', 'WS'):
+						stack.append(tok)
 						tok = self.lexer.token()
-				else:
-					if len(value) > 0:
-						tok = lex.LexToken()
-						tok.type = 'STRING_LIT'
-						tok.value = value
-						tok.lineno = lineno
-						tok.lexpos = lexpos
+					
+					if len(stack):
+						# Since `stack` is only strings and WS, we can divide it into
+						# three sections:
+						#  1 - Initial Whitespace
+						#  2 - Final Whitespace
+						#  3 - All tokens inbetween
+						# The initial and final whitespace can be concatenated into
+						# just one or zero whitespace tokens on each end
+						# then all whitespace in the middle can be dropped, and then
+						# all strings concatenated
+						
+						# Step 1: Concatenate initial whitespace
+						stack = self._concat_ws_tokens(stack, 0)
+						
+						# Step 2: Concatenate final whitespace
+						if stack[-1].type == 'WS':
+							offset = len(stack) - 1
+							for i in reversed(xrange(0, len(stack))):
+								if stack[i].type == 'STRING_LIT':
+									offset = i 
+									break
+							stack = self._concat_ws_tokens(stack, offset)
+						
+						# At this point, there should only be an optional WS token
+						# at the beginning and end
+						l = len(stack)
+						
+						if l > 1:
+							start = 0
+							end = l
+							if stack[0].type == 'WS':
+								start = 1
+							if stack[-1].type == 'WS':
+								end = l - 1
+							
+							s_tok = lex.LexToken()
+							s_tok.type = 'STRING_LIT'
+							s_tok.value = ''
+							s_tok.lineno = stack[start].lineno
+							s_tok.lexpos = stack[start].lexpos
+							
+							last_tok = None
+							
+							for i in xrange(start, end):
+								last_tok = stack[i]
+								if last_tok.type == 'STRING_LIT':
+									s_tok.value += last_tok.value
+							
+							assert last_tok.type == 'STRING_LIT'
+							stack_begin = stack[:start]
+							stack_end = stack[end + 1:]
+							stack = stack_begin + [s_tok] + stack_end
+						# Now yield the modified stack
+						for t in stack:
+							yield t
+					
+					if not tok:
+						break
+					# then fall through and yield the last non-string/ws token
+					
+				elif tok.type == 'WS':
+					# Whitespace can also concatenate
+					ws_tok = lex.LexToken()
+					ws_tok.type = 'WS'
+					ws_tok.lineno = lineno
+					ws_tok.lexpos = lexpos
+					ws_tok.value = ''
+					while tok and tok.type == 'WS':
+						ws_tok.value += tok.value
+						tok = self.lexer.token()
+					
+					yield ws_tok
+					if not tok:
+						break
+					# then fall through and yield the last non-ws token
 				yield tok
 			else:
 				break
+	
+	def _concat_ws_tokens(self, tokens, offset):
+		start_offset = offset
+		tok = tokens[offset]
+		l = len(tokens)
+		
+		if tok.type == 'WS':
+			value = ''
+			while tok and tok.type == 'WS':
+				value += tok.value
+				if offset + 1 < l:
+					offset += 1
+					tok = tokens[offset]
+				else:
+					break
+			
+			tok = lex.LexToken()
+			tok.type = 'WS'
+			tok.value = value
+			tok.lineno = tokens[start_offset].lineno
+			tok.lexpos = tokens[start_offset].lexpos
+			
+			tokens_start = tokens[:start_offset]
+			tokens_end = tokens[offset + 1:]
+			tokens = tokens_start + [tok] + tokens_end
+				
+		return tokens
 	
 	def find_tok_column(self, token):
 		last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)
@@ -47,16 +145,16 @@ class Lexer(object):
 		return (token.lineno, self.find_tok_column(token))
 	
 	def push(self, s):
-		t = '-' * len(self.lexer.lexstatestack)
-		self.log.debug("{}Starting {}".format(t, s))
+		t = '-' * len(self.lexer.lexstatestack) #@UnusedVariable
+		#self.log.debug("{}Starting {}".format(t, s))
 		self.lexer.push_state(s)
 	
 	def pop(self):
-		t = '-' * (len(self.lexer.lexstatestack) - 1)
-		current = self.lexer.current_state()
+		t = '-' * (len(self.lexer.lexstatestack) - 1) #@UnusedVariable
+		current = self.lexer.current_state() #@UnusedVariable
 		self.lexer.pop_state()
-		following = self.lexer.current_state()
-		self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
+		following = self.lexer.current_state() #@UnusedVariable
+		#self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
 		
 	
 	reserved = {k.strip() : k.strip().replace('-', '').upper() for k in """

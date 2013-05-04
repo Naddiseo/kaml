@@ -8,10 +8,17 @@ from kaml import Lexer
 class T(LexToken):
 	__slots__ = ('type', 'value', 'lineno', 'lexpos')
 	def __init__(self, t, v = None):
-		self.lineno = 0
-		self.lexpos = 0
-		self.type = t
-		self.value = v
+		if isinstance(t, (tuple, list)):
+			l = len(t)
+			self.type = t[0] if l else t
+			self.value = t[1] if l > 1 else v
+			self.lineno = t[2] if l > 2 else 0
+			self.lexpos = t[3] if l > 3 else 0
+		else:
+			self.lineno = 0
+			self.lexpos = 0
+			self.type = t
+			self.value = v
 	
 	def __eq__(self, other):
 		other_t = None
@@ -42,14 +49,20 @@ class T(LexToken):
 	def __repr__(self):
 		return "Token({}, {!r})".format(self.type, self.value)
 
-def sl(s):
+def S(s):
 	return ('STRING_LIT', s)
 
-def nl(n):
+def N(n):
 	return ('INT_LIT', n)
 
-def name(_id):
+def I(_id):
 	return ('ID', _id)
+
+def K(kw):
+	return (kw, '-{}'.format(kw.lower()))
+
+def W(_w = None):
+	return ('WS', _w)
 
 class Test(unittest.TestCase):
 	
@@ -58,21 +71,18 @@ class Test(unittest.TestCase):
 	
 	def assertTokens(self, code, tokens = [], filter_ws = True, msg = None):
 		lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t.type != 'WS']
-		test_tokens = []
-		for t in tokens:
-			test_tokens.append(T(*t) if isinstance(t, (list, tuple)) else t)
-		
+		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens]
+		self.assertTokenLists(test_tokens, lexer_tokens, msg)
+	
+	def assertTokenLists(self, expected_tokens, actual_tokens, msg = None):
 		try:
-			self.assertEqual(len(lexer_tokens), len(test_tokens))
+			self.assertEqual(len(expected_tokens), len(actual_tokens))
 		except AssertionError:
-			print("{}".format(lexer_tokens))
+			print("{}\n".format(expected_tokens, actual_tokens))
 			raise
 		
-		for i in xrange(len(lexer_tokens)):
-			t1 = lexer_tokens[i]
-			t2 = test_tokens[i]
-			
-			self.assertEqual(t1, t2, msg)
+		for expected, actual in zip(expected_tokens, actual_tokens):
+			self.assertEqual(expected, actual, msg)
 	
 	def test_kw_tokens(self):
 		code = "-fn -set -for -if -elif -else -use -while -continue -break or and true false"
@@ -81,43 +91,60 @@ class Test(unittest.TestCase):
 		self.assertTokens(code, tokens)
 	
 	def test_stringsg(self):
-		code = "'ABCD'"
-		tokens = [('STRING_LIT', 'ABCD')]
+		tokens = [S('ABCD')]
 		
-		self.assertTokens(code, tokens)
+		self.assertTokens("'ABCD'", tokens)
 		
 		# Concatenation
-		code = "'AB''CD'"
-		self.assertTokens(code, tokens)
+		self.assertTokens("'AB''CD'", tokens)
 		
 		# Concatenation with whitespace
-		code = "\n'AB'\n 'CD'\n"
-		self.assertTokens(code, tokens)
+		self.assertTokens("\n'AB'\n 'CD'\n", [W('\n ')] + tokens + [W('\n ')])
+		
+		# Test escaped quote
+		self.assertTokens('"\\\""', [S('"')])
 	
 	def test_stringdbl(self):
-		code = '"ABCD"'
-		tokens = [('STRING_LIT', 'ABCD')]
+		tokens = [S('ABCD')]
 		
-		self.assertTokens(code, tokens)
+		self.assertTokens('"ABCD"', tokens)
 		
 		# Concatenation
-		code = '"AB""CD"'
-		self.assertTokens(code, tokens)
+		self.assertTokens('"AB""CD"', tokens)
 		
 		# Concatenation with whitespace
-		code = '\n "AB"\n "CD"\n '
-		self.assertTokens(code, tokens)
+		self.assertTokens('\n "AB"\n "CD"\n ', [W('\n ')] + tokens + [W('\n ')])
+		# Test escaped quote
+		self.assertTokens("'\\\''", [S("'")])
 	
 	def test_simple_interpolation(self):
-		code = "'$bar'"
-		tokens = [name('$bar')]
+		# Simple var
+		self.assertTokens("'$bar'", [I('$bar')])
+		# Simple var embedded
+		self.assertTokens("'Hello $bar World'", [S('Hello '), I('$bar'), S(' World')])
 		
-		self.assertTokens(code, tokens)
+		# Simple in DBL
+		self.assertTokens('"$bar"', [I('$bar')])
+		#simple embedded in dbl
+		self.assertTokens('"Hello $bar World', [S('Hello '), I('$bar'), S(' World')])
 		
-		code = "'Hello $bar World'"
-		tokens = [sl('Hello '), name('$bar'), sl(' World')]
+		# Curly var
+		self.assertTokens("'{bar}'", [I('$bar')])
+		self.assertTokens('"{bar}"', [I('$bar')])
+		self.assertTokens("'Hello {bar} World'", [S('Hello '), I('bar'), I(' World')])
+		self.assertTokens('"Hello {bar} World"', [S('Hello '), I('bar'), I(' World')])
+	
+	def test_concat_white(self):
+		""" Tests the WS token concatenation in the lexer """
 		
-		self.assertTokens(code, tokens)
-
+		tokens1 = map(T, [('WS', ' '), ('WS', ' '), ('WS', ' ')])
+		expected = map(T, [('WS', '   ')])
+		
+		actual = self.l._concat_ws_tokens(tokens1, 0)
+		
+		self.assertTokenLists(expected, actual)
+		
+		
+		
 if __name__ == '__main__':
 	unittest.main()
