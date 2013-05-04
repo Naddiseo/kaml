@@ -1,5 +1,1 @@
-'${ bar#id.bar[""] {} }'
-
-{{
-	{{ Hello }}
-}}
+'Hello ${bar} World'

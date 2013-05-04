@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import unittest
 
 from ply.lex import LexToken
@@ -41,6 +42,15 @@ class T(LexToken):
 	def __repr__(self):
 		return "Token({}, {!r})".format(self.type, self.value)
 
+def sl(s):
+	return ('STRING_LIT', s)
+
+def nl(n):
+	return ('INT_LIT', n)
+
+def name(_id):
+	return ('ID', _id)
+
 class Test(unittest.TestCase):
 	
 	def setUp(self):
@@ -52,7 +62,11 @@ class Test(unittest.TestCase):
 		for t in tokens:
 			test_tokens.append(T(*t) if isinstance(t, (list, tuple)) else t)
 		
-		self.assertEqual(len(lexer_tokens), len(test_tokens))
+		try:
+			self.assertEqual(len(lexer_tokens), len(test_tokens))
+		except AssertionError:
+			print("{}".format(lexer_tokens))
+			raise
 		
 		for i in xrange(len(lexer_tokens)):
 			t1 = lexer_tokens[i]
@@ -92,6 +106,17 @@ class Test(unittest.TestCase):
 		
 		# Concatenation with whitespace
 		code = '\n "AB"\n "CD"\n '
+		self.assertTokens(code, tokens)
+	
+	def test_simple_interpolation(self):
+		code = "'$bar'"
+		tokens = [name('$bar')]
+		
+		self.assertTokens(code, tokens)
+		
+		code = "'Hello $bar World'"
+		tokens = [sl('Hello '), name('$bar'), sl(' World')]
+		
 		self.assertTokens(code, tokens)
 
 if __name__ == '__main__':

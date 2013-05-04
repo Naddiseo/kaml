@@ -12,7 +12,7 @@ class Lexer(object):
 		self.lexer.lextokens['{'] = 1
 		self.lexer.lextokens['}'] = 1
 		self.nesting = 0
-		self.rnesting = 0 # for raw strings
+		self.rnesting = 0# for raw strings
 		
 	def tokenize(self, data):
 		self.lexer.input(data)
@@ -240,7 +240,7 @@ class Lexer(object):
 	def t_stringsg_stringdbl_rawstr_SIMPLE_VAR(self, t):
 		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
 		t.type = 'ID'
-		self.log.debug("Simple var :".format(t.value))
+		#self.log.debug("Simple var :".format(t.value))
 		return t
 	
 	
@@ -258,8 +258,8 @@ class Lexer(object):
 		self.pop()
 	
 	def t_stringsg_stringdbl_INNER(self, t):
-		r'[^\{\'\"]+'
+		r'[^\{\'\"\$]+'
 		t.type = 'STRING_LIT'
-		self.log.debug('inner')
+		#self.log.debug('inner')
 		return t
 	# End Strings ====
