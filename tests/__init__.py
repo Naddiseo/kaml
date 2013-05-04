@@ -134,13 +134,13 @@ class Test(unittest.TestCase):
 		# Simple in DBL
 		self.assertTokens('"$bar"', [I('$bar')])
 		#simple embedded in dbl
-		self.assertTokens('"Hello $bar World', [S('Hello '), I('$bar'), S(' World')])
+		self.assertTokens('"Hello $bar World"', [S('Hello '), I('$bar'), S(' World')])
 		
 		# Curly var
 		self.assertTokens("'{bar}'", [I('bar')])
 		self.assertTokens('"{bar}"', [I('bar')])
-		self.assertTokens("'Hello {bar} World'", [S('Hello '), I('bar'), I(' World')])
-		self.assertTokens('"Hello {bar} World"', [S('Hello '), I('bar'), I(' World')])
+		self.assertTokens("'Hello {bar} World'", [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens('"Hello {bar} World"', [S('Hello '), I('bar'), S(' World')])
 	
 	def test_concat_white(self):
 		""" Tests the WS token concatenation in the lexer """
@@ -151,8 +151,6 @@ class Test(unittest.TestCase):
 		actual = self.l._concat_ws_tokens(tokens1, 0)
 		
 		self.assertTokenLists(expected, actual)
-		
-		
 		
 if __name__ == '__main__':
 	unittest.main()

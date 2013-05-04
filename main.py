@@ -9,5 +9,5 @@ if __name__ == '__main__':
 		
 		l = Lexer()
 		with open(file_name) as fp:
-			for t in l.tokenize(fp.read()):
+			for t in l.tokenize(unicode(fp.read())):
 				print t

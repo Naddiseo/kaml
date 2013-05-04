@@ -22,9 +22,9 @@ class Lexer(object):
 	
 	def _push_token(self, t):
 		self.tok_stack.append(t)
-		
+	
 	def tokenize(self, data):
-		self.lexer.input(data)
+		self.lexer.input(unicode(data))
 		while True:
 			tok = self._get_token()
 				
@@ -32,7 +32,6 @@ class Lexer(object):
 				if tok.type == 'STRING_LIT':
 					for t in self._tokenize_string(tok):
 						yield t
-					continue
 					
 				elif tok.type == 'WS':
 					# Whitespace can also concatenate
@@ -51,7 +50,6 @@ class Lexer(object):
 					yield tok
 			else:
 				break
-	
 	
 	def _tokenize_string(self, tok):
 		
