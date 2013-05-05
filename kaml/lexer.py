@@ -155,7 +155,8 @@ class Lexer(object):
 	
 	def push(self, s):
 		t = '-' * len(self.lexer.lexstatestack) #@UnusedVariable
-		#self.log.debug("{}Starting {}".format(t, s))
+		if self.lexer.trace:
+			self.log.debug("{}Starting {}".format(t, s))
 		self.lexer.push_state(s)
 	
 	def pop(self):
@@ -163,7 +164,8 @@ class Lexer(object):
 		current = self.lexer.current_state() #@UnusedVariable
 		self.lexer.pop_state()
 		following = self.lexer.current_state() #@UnusedVariable
-		#self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
+		if self.lexer.trace:
+			self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
 		
 	
 	reserved = {k.strip() : k.strip().replace('-', '').upper() for k in """
@@ -240,11 +242,13 @@ class Lexer(object):
 	def t_rawstr_error(self, t):
 		print("Error in rawstr")
 	
-	def t_INITIAL_variablestring_NL(self, t):
+	def NL(self, t):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
 		t.type = 'WS'
 		return t
+	
+	t_INITIAL_variablestring_NL = NL
 	
 	def t_INITIAL_variablestring_ID(self, t):
 		r'[a-zA-Z_\-][a-zA-Z_0-9\-]*'
@@ -304,11 +308,7 @@ class Lexer(object):
 		
 		#return t
 	# End Variable Interpolation ========
-	def t_stringsg_stringdbl_rawstr_NL(self, t):
-		r'\n+'
-		self.lexer.lineno += len(t.value)
-		t.type = 'STRING_LIT'
-		return t
+	t__rawstr_NL = NL
 	
 	def t_rawstr_VAR_STRING_START2(self, t):
 		r'\$\{(?!\{)'
@@ -321,6 +321,10 @@ class Lexer(object):
 		#self.log.debug('rawstr inner')
 		return t
 	
+	def t_rawstr_dollar(self, t):
+		r'\$(?!\{)'
+		t.type = 'STRING_LIT'
+		return t
 	
 	def t_rawstr_INNER2(self, t):
 		r'\}(?!\}\})'
@@ -344,6 +348,7 @@ class Lexer(object):
 	# Raw String Blocks
 	
 	# String Literals =====
+	t_stringsg_stringdbl_NL = NL
 	
 	def t_stringsg_stringdbl_ESCAPE_CHAR(self, t):
 		r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])? | \\[^\n\r\f0-9a-fA-F]'

@@ -167,6 +167,8 @@ class Test(unittest.TestCase):
 		self.assertTokens('''"Hello {bar} ""World"''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('''"Hello {bar} " "World"''', [S('Hello '), I('bar'), S(' World')])
 		
+		self.assertTokens('''" Hello {\nbar\n} World"''', [S(' Hello '), W('\n'), I('bar'), W('\n'), S(' World')])
+		
 		# Dollar curly
 		self.assertTokens("'${bar}'", [S(''), I('bar'), S('')])
 		self.assertTokens('"${bar}"', [S(''), I('bar'), S('')])
