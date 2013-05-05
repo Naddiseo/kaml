@@ -141,9 +141,12 @@ A dollar sign, or curly brace by itself are just treated as plain text.
 
 The above would print
 
->
+> 
+
 > Hello World. I have $10.
+
 > let set C = {1,2,3}
+
 > 
 
 [^1]: Although the brace syntax is used for printing expressions, it can also be used to embed any type of code, even more strings which have their own escaped expressions.
