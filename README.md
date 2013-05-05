@@ -130,7 +130,7 @@ with "Raw Strings", or "Raw Blocks." Raw strings are surrounded by triple curly 
 similarly to other string types, except that the only variable escaping is done with the third `${}` syntax.
 A dollar sign, or curly brace by itself are just treated as plain text.
 
-``
+```
 
 	{{{
 	Hello World. I have $10.
@@ -138,16 +138,6 @@ A dollar sign, or curly brace by itself are just treated as plain text.
 	}}}
 
 ```
-
-The above example would print
-
->
-
-> Hello World. I have $10
-
-> let set C = {1,2,3}
-
->
 
 
 [^1]: Although the brace syntax is used for printing expressions, it can also be used to embed any type of code, even more strings which have their own escaped expressions.

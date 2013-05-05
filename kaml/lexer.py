@@ -275,7 +275,7 @@ class Lexer(object):
 	
 		
 	def t_INITIAL_variablestring_RAWBLOCK_BEGIN(self, t):
-		r'\{\{'
+		r'\{\{\{'
 		self.push('rawstr')
 		# Push a dummy token
 		t.value = ''
@@ -309,27 +309,32 @@ class Lexer(object):
 		self.lexer.lineno += len(t.value)
 		t.type = 'STRING_LIT'
 		return t
-		
+	
+	def t_rawstr_VAR_STRING_START2(self, t):
+		r'\$\{(?!\{)'
+		self.nesting += 1
+		self.push('variablestring')
+	
 	def t_rawstr_INNER(self, t):
-		r'[^\{\}]+'
+		r'[^\$\}]+'
 		t.type = 'STRING_LIT'
 		#self.log.debug('rawstr inner')
 		return t
 	
 	
 	def t_rawstr_INNER2(self, t):
-		r'\}(?!\})'
+		r'\}(?!\}\})'
 		t.type = 'STRING_LIT'
 		return t
 	
 	def t_rawstr_ESCAPED_BRACE(self, t):
-		r'(?:\\\{)|(?:\\\})'
-		t.value = t.value[-1]
+		r'(?:{{)|(?:}}(?!\}))'
+		#t.value = t.value[
 		t.type = 'STRING_LIT'
 		return t
 	
 	def t_rawstr_END(self, t):
-		r'\}\}'
+		r'\}\}\}'
 		t.value = ''
 		
 		t.type = 'STRING_LIT'
@@ -358,7 +363,7 @@ class Lexer(object):
 		self.nesting += 1
 		self.push('variablestring')
 	
-	def t_stringsg_stringdbl_rawstr_VAR_STRING_START2(self, t):
+	def t_stringsg_stringdbl_VAR_STRING_START2(self, t):
 		r'\$\{(?!\{)'
 		self.nesting += 1
 		self.push('variablestring')

@@ -192,13 +192,22 @@ class Test(unittest.TestCase):
 		self.assertTokenLists(expected, actual)
 	
 	def test_rawstr(self):
-		self.assertTokens('''{{}}''', [S('')])
-		self.assertTokens('''{{ \n }}''', [S(' \n ')])
-		self.assertTokens('''{{"}}''', [S('"')])
-		self.assertTokens('''{{'}}''', [S('\'')])
-		self.assertTokens('''{{$}}''', [S('$')])
-		self.assertTokens('''{{{}}''', [S('{')])
-		self.assertTokens('''{{{{}}''', [S('{{')])
+		def R(s):
+			return '{}{}{}'.format('{{{', s, '}}}')
+		
+		self.assertTokens(R(''), [S('')])
+		self.assertTokens(R(' \n '), [S(' \n ')])
+		self.assertTokens(R('"'), [S('"')])
+		self.assertTokens(R("'"), [S('\'')])
+		self.assertTokens(R("$"), [S('$')])
+		# Braces are just plain
+		self.assertTokens(R("{"), [S('{')])
+		self.assertTokens(R("{{"), [S('{{')])
+		self.assertTokens(R("{{{{"), [S('{{{{')])
+		
+		# Interpolation is done with  ${}
+		self.assertTokens(R("${hello}"), [S(''), I('hello'), S('')])
+		
 		
 if __name__ == '__main__':
 	unittest.main()
