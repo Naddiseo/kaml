@@ -2,16 +2,16 @@ KAML - a templating language influenced from SCSS and Jinja
 
 
 *	[Syntax](#syntax)
-	*	[Overview of Syntax](#overview)
+	*	[Overview of Syntax](#overview-of-syntax)
 	*	[Comments](#comments)
 	*	[Strings](#strings)
-		*	[Quoted Strings](#qstrings)
-			*	[Variable Interpolation in Quoted Strings](#qstringvars)
-		*	[Raw Strings](#rstrings)
+		*	[Quoted Strings](#quoted-strings)
+			*	[Variable Interpolation in Quoted Strings](#variable-interpolation-in-quoted-string)
+		*	[Raw Strings](#raw-strings)
 
 <h1 id="syntax">Syntax</h1>
 
-<h2 id="overview">Overview of Syntax</h2>
+<h2 id="overview-of-syntax">Overview of Syntax</h2>
 
 The syntax was inspired by SCSS, but with the intension of applying to HTML. Thus, bare words are treated as
 functions with arguments passed in a strange syntax.
@@ -46,7 +46,7 @@ Comments are as in C++
 
 Strings come in three variations in KAML. Single quoted, Double Quoted, and Raw. We'll get back to raw strings later.
 
-<h3 id="qstrings">Quoted Strings</h3>
+<h3 id="quoted-strings">Quoted Strings</h3>
 
 Single and double quoted string behave the same way they do in most programming languages such as C and Python, they are a list of characters
 with the exception that some can be escaped with a backslash "\" such as new lines, and quotes ("\n", "\"", '\'').
@@ -65,7 +65,7 @@ so that the following two examples are identical:
 
 ```
 
-<h4 id="qstringvars">Variable Interpolation in Quoted Strings</h4>
+<h4 id="variable-interpolation-in-quoted-strings">Variable Interpolation in Quoted Strings</h4>
 
 Often times in templating languages, one needs to place the value of a variable or expression into the text. 
 In KAML this can be achieved in one of 3 ways. For a simple variable one can use the simple `$variable` syntax.
