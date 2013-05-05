@@ -12,7 +12,6 @@ class Lexer(object):
 		self.lexer.lextokens['{'] = 1
 		self.lexer.lextokens['}'] = 1
 		self.nesting = 0
-		self.rnesting = 0# for raw strings
 		self.tok_stack = []
 	
 	def _get_token(self):
@@ -278,6 +277,10 @@ class Lexer(object):
 	def t_INITIAL_variablestring_RAWBLOCK_BEGIN(self, t):
 		r'\{\{'
 		self.push('rawstr')
+		# Push a dummy token
+		t.value = ''
+		t.type = 'STRING_LIT'
+		return t
 	
 	# Variable interpolation
 	def t_variablestring_LBRACE(self, t):
@@ -320,25 +323,19 @@ class Lexer(object):
 		return t
 	
 	def t_rawstr_ESCAPED_BRACE(self, t):
-		r'\{\{'
-		self.rnesting += 1
-		t.value = '{'
+		r'(?:\\\{)|(?:\\\})'
+		t.value = t.value[-1]
 		t.type = 'STRING_LIT'
-		#self.log.debug('Escaped brace "{"')
 		return t
 	
 	def t_rawstr_END(self, t):
 		r'\}\}'
+		t.value = ''
 		
-		t.value = '}'
 		t.type = 'STRING_LIT'
 			
-		if self.rnesting == 0:
-			self.pop()
-		else:
-			self.rnesting -= 1
-			#self.log.debug('Escaped brace "}"')
-			return t
+		self.pop()
+		return t
 	# Raw String Blocks
 	
 	# String Literals =====
@@ -350,13 +347,13 @@ class Lexer(object):
 		self.lexer.lineno += t.value.count('\n')
 		return t
 		
-	def t_stringsg_stringdbl_rawstr_SIMPLE_VAR(self, t):
+	def t_stringsg_stringdbl_SIMPLE_VAR(self, t):
 		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
 		t.type = 'ID'
 		#self.log.debug("Simple var :".format(t.value))
 		return t
 	
-	def t_stringsg_stringdbl_rawstr_VAR_STRING_START(self, t):
+	def t_stringsg_stringdbl_VAR_STRING_START(self, t):
 		r'\{(?!\{)'
 		self.nesting += 1
 		self.push('variablestring')
@@ -393,4 +390,10 @@ class Lexer(object):
 		t.type = 'STRING_LIT'
 		t.value = t.value[0]
 		return t
+	
+	def t_stringsg_stringdbl_ESCAPED_DOLLAR(self, t):
+		r'\$(?=[^a-zA-Z_\-])'
+		t.type = 'STRING_LIT'
+		return t
+	
 	# End Strings ====

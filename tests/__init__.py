@@ -114,8 +114,6 @@ class Test(unittest.TestCase):
 		# Test escaped quote
 		self.assertTokens(r'"\""', [S('"')])
 		# Escaped brace
-		self.assertTokens(r'"{{"', [S("{")])
-		self.assertTokens(r'"}}"', [S("}")])
 		self.assertTokens(r"'{{'", [S("{")])
 		self.assertTokens(r"'}}'", [S("}")])
 		
@@ -133,6 +131,9 @@ class Test(unittest.TestCase):
 		self.assertTokens(' \n "AB" \n "CD" \n ', [W(' \n ')] + tokens + [W(' \n ')])
 		# Test escaped quote
 		self.assertTokens(r"'\''", [S("'")])
+		# escaped braces
+		self.assertTokens(r'"{{"', [S("{")])
+		self.assertTokens(r'"}}"', [S("}")])
 	
 	def test_string(self):
 		
@@ -171,6 +172,14 @@ class Test(unittest.TestCase):
 		self.assertTokens('"${bar}"', [S(''), I('bar'), S('')])
 		self.assertTokens("'Hello ${bar} World'", [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('"Hello ${bar} World"', [S('Hello '), I('bar'), S(' World')])
+		
+		# Test escaped ${}
+		self.assertTokens("'${{'", [S('${')])
+		self.assertTokens('"${{"', [S('${')])
+		self.assertTokens("'$'", [S('$')])
+		self.assertTokens('"$"', [S('$')])
+		self.assertTokens("'$ '", [S('$ ')])
+		self.assertTokens('"$ "', [S('$ ')])
 	
 	def test_concat_white(self):
 		""" Tests the WS token concatenation in the lexer """
@@ -181,6 +190,15 @@ class Test(unittest.TestCase):
 		actual = self.l._concat_ws_tokens(tokens1, 0)
 		
 		self.assertTokenLists(expected, actual)
+	
+	def test_rawstr(self):
+		self.assertTokens('''{{}}''', [S('')])
+		self.assertTokens('''{{ \n }}''', [S(' \n ')])
+		self.assertTokens('''{{"}}''', [S('"')])
+		self.assertTokens('''{{'}}''', [S('\'')])
+		self.assertTokens('''{{$}}''', [S('$')])
+		self.assertTokens('''{{{}}''', [S('{')])
+		self.assertTokens('''{{{{}}''', [S('{{')])
 		
 if __name__ == '__main__':
 	unittest.main()
