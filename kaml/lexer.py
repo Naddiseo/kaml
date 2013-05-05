@@ -350,16 +350,19 @@ class Lexer(object):
 		self.lexer.lineno += t.value.count('\n')
 		return t
 		
-	
 	def t_stringsg_stringdbl_rawstr_SIMPLE_VAR(self, t):
 		r'\$[a-zA-Z_\-][a-zA-Z_0-9\-]*'
 		t.type = 'ID'
 		#self.log.debug("Simple var :".format(t.value))
 		return t
 	
-	
 	def t_stringsg_stringdbl_rawstr_VAR_STRING_START(self, t):
 		r'\{(?!\{)'
+		self.nesting += 1
+		self.push('variablestring')
+	
+	def t_stringsg_stringdbl_rawstr_VAR_STRING_START2(self, t):
+		r'\$\{(?!\{)'
 		self.nesting += 1
 		self.push('variablestring')
 	
@@ -380,8 +383,14 @@ class Lexer(object):
 		return t
 	
 	def t_stringsg_stringdbl_INNER(self, t):
-		r'[^\{\'\"\$]+'
+		r'[^\{\}\'\"\$]+'
 		t.type = 'STRING_LIT'
 		#self.log.debug('inner')
+		return t
+	
+	def t_stringsg_stringdbl_ESCAPED_BRACES(self, t):
+		r'(?:\{\{)|(?:\}\})'
+		t.type = 'STRING_LIT'
+		t.value = t.value[0]
 		return t
 	# End Strings ====

@@ -113,7 +113,12 @@ class Test(unittest.TestCase):
 		
 		# Test escaped quote
 		self.assertTokens(r'"\""', [S('"')])
-	
+		# Escaped brace
+		self.assertTokens(r'"{{"', [S("{")])
+		self.assertTokens(r'"}}"', [S("}")])
+		self.assertTokens(r"'{{'", [S("{")])
+		self.assertTokens(r"'}}'", [S("}")])
+		
 	def test_stringdbl(self):
 		tokens = [S('ABCD')]
 		
@@ -156,6 +161,16 @@ class Test(unittest.TestCase):
 		self.assertTokens('''"Hello ""{bar} World"''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens(''' "Hello " " {bar} World" ''', [W(' '), S('Hello  '), I('bar'), S(' World'), W(' ')])
 		self.assertTokens(''' "Hello " "{bar} World" ''', [W(' '), S('Hello '), I('bar'), S(' World'), W(' ')])
+		self.assertTokens('''"Hello {bar}"" World"''', [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens('''"Hello {bar}" " World"''', [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens('''"Hello {bar} ""World"''', [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens('''"Hello {bar} " "World"''', [S('Hello '), I('bar'), S(' World')])
+		
+		# Dollar curly
+		self.assertTokens("'${bar}'", [S(''), I('bar'), S('')])
+		self.assertTokens('"${bar}"', [S(''), I('bar'), S('')])
+		self.assertTokens("'Hello ${bar} World'", [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens('"Hello ${bar} World"', [S('Hello '), I('bar'), S(' World')])
 	
 	def test_concat_white(self):
 		""" Tests the WS token concatenation in the lexer """
