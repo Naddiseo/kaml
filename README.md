@@ -104,10 +104,50 @@ To output the return of an expression one can use `{expression}` syntax.
 
 The above example would print:
 
-> Hello World
-> -0.75
+> Hello World -0.75
 
-The third form of placing variables into a string is the combination of the first two `${expression}`
+The third form of placing variables into a string is the combination of the first two `${expression}`.
+
+```
+	// hello = "Hello World"
+	"${hello}"
+
+```
+
+Prints out:
+
+> Hello World
+
+<h3 id="raw-strings">Raw Strings</h3>
+
+Like most other languages, KAML starts off in a _code_ state, that is, it assumes that
+when it starts reading a file, that it's reading code, not data; (c.f PHP assumes files are data).
+The problem with this approach in templating languages like KAML is that one often needs to print
+a lot of text data. A few solutions that languages employ to this are multiline strings and heredocs.
+The main problem with these two approaches is that it can hide the structure of the data from an
+editor, which for HTML editing could hinder development. KAML solves this problem a different way,
+with "Raw Strings", or "Raw Blocks." Raw strings are surrounded by triple curly braces, and behave
+similarly to other string types, except that the only variable escaping is done with the third `${}` syntax.
+A dollar sign, or curly brace by itself are just treated as plain text.
+
+``
+
+	{{{
+	Hello World. I have $10.
+	let set C = {1,2,3}
+	}}}
+
+```
+
+The above example would print
+
+>
+
+> Hello World. I have $10
+
+> let set C = {1,2,3}
+
+>
 
 
 [^1]: Although the brace syntax is used for printing expressions, it can also be used to embed any type of code, even more strings which have their own escaped expressions.
