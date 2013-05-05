@@ -345,7 +345,7 @@ class Lexer(object):
 	
 	# String Literals =====
 	
-	def t_stringsg_stringdbl_rawstr_ESCAPE_CHAR(self, t):
+	def t_stringsg_stringdbl_ESCAPE_CHAR(self, t):
 		r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])? | \\[^\n\r\f0-9a-fA-F]'
 		t.type = 'STRING_LIT'
 		t.value = t.value[1:] # Remove the slash

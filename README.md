@@ -126,14 +126,15 @@ The problem with this approach in templating languages like KAML is that one oft
 a lot of text data. A few solutions that languages employ to this are multiline strings and heredocs.
 The main problem with these two approaches is that it can hide the structure of the data from an
 editor, which for HTML editing could hinder development. KAML solves this problem a different way,
-with "Raw Strings", or "Raw Blocks." Raw strings are surrounded by triple curly braces, and behave
-similarly to other string types, except that the only variable escaping is done with the third `${}` syntax.
-A dollar sign, or curly brace by itself are just treated as plain text.
+with "Raw Strings", or "Raw Blocks." Raw strings are surrounded by triple curly braces, 
+and escape most of the text, unlike quoted strings with require you to escape things like unicode sequences and newlines.
+In raw strings, variable escaping is done with the third `${}` syntax. A dollar sign, or curly brace by itself are just treated as plain text.
 
 ```
-
+	
+	// name = "Bob"
 	{{{
-	Hello World. I have $10.
+	Hello ${name}. I have $10.\n
 	let set C = {1,2,3}
 	}}}
 
@@ -142,8 +143,10 @@ A dollar sign, or curly brace by itself are just treated as plain text.
 The above would print:
 
 	
-	Hello World. I have $10.
+	Hello Bob. I have $10.\n
 	let set C = {1,2,3}
 	
+
+If for some
 
 [^1]: Although the brace syntax is used for printing expressions, it can also be used to embed any type of code, even more strings which have their own escaped expressions.

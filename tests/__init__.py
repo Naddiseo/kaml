@@ -200,6 +200,8 @@ class Test(unittest.TestCase):
 		self.assertTokens(R('"'), [S('"')])
 		self.assertTokens(R("'"), [S('\'')])
 		self.assertTokens(R("$"), [S('$')])
+		# Escaping
+		self.assertTokens(R(' \\n '), [S(' \\n ')])
 		# Braces are just plain
 		self.assertTokens(R("{"), [S('{')])
 		self.assertTokens(R("{{"), [S('{{')])
