@@ -257,7 +257,7 @@ class Lexer(object):
 		return t
 	
 	def t_INITIAL_variablestring_INT_LIT(self, t):
-		r'[1-9][0-9]*'
+		r'0|[1-9][0-9]*'
 		t.value = int(t.value)
 		return t
 	
@@ -322,8 +322,12 @@ class Lexer(object):
 		return t
 	
 	def t_rawstr_dollar(self, t):
-		r'\$(?!\{)'
+		r'\$((?!\{)|(\{\{))'
 		t.type = 'STRING_LIT'
+		
+		if t.value == '${{':
+			t.value = '${'
+		
 		return t
 	
 	def t_rawstr_INNER2(self, t):

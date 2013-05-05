@@ -43,6 +43,10 @@ class T(LexToken):
 		ret = other_t == self.type
 		
 		if all([other_v is not None, self.value is not None]):
+			if self.type == 'INT_LIT':
+				self.value = int(self.value)
+			if other_t == 'INT_LIT':
+				other_v = int(other_v)
 			ret = ret and other_v == self.value
 		
 		return ret
@@ -50,6 +54,11 @@ class T(LexToken):
 	def __repr__(self):
 		return "Token({}, {!r})".format(self.type, self.value)
 
+def R(s):
+	""" For writing raw strings """
+	return '{}{}{}'.format('{{{', s, '}}}')
+
+# ------ Token Shortcuts ---------
 def S(s):
 	return ('STRING_LIT', s)
 
@@ -64,6 +73,7 @@ def K(kw):
 
 def W(_w = None):
 	return ('WS', _w)
+# -------------------------------
 
 class Test(unittest.TestCase):
 	
@@ -98,6 +108,15 @@ class Test(unittest.TestCase):
 		tokens = [T(t.replace('-', '').upper()) for t in code.split()]
 		
 		self.assertTokens(code, tokens, filter_ws = True)
+	
+	def test_idents(self):
+		self.assertTokens(
+			"simplevar simple_var2 simple-var -simplevar -simple-var",
+			[I('simplevar'), I('simple_var2'), I('simple-var'), I('-simplevar'), I('-simple-var')],
+			filter_ws = True
+		)
+		
+		self.assertTokens('0-ident', [N('0'), I('-ident')], filter_ws = True)
 	
 	def test_stringsg(self):
 		tokens = [S('ABCD')]
@@ -140,6 +159,12 @@ class Test(unittest.TestCase):
 		# Mixed strings
 		self.assertTokens(''' \n "AB" \n 'CD' \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
 		self.assertTokens(''' \n 'AB' \n "CD" \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
+		self.assertTokens(''' \n {} \n "CD" \n 'EF' \n '''.format(R('AB')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n {} \n 'CD' \n "EF" \n '''.format(R('AB')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n "AB" \n {} \n 'EF' \n '''.format(R('CD')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n 'AB' \n {} \n "EF" \n '''.format(R('CD')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n "AB" \n 'CD' \n {} \n '''.format(R('EF')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n 'AB' \n "CD" \n {} \n '''.format(R('EF')), [W(' \n '), S('ABCDEF'), W(' \n ')])
 	
 	def test_simple_interpolation(self):
 		# Simple var
@@ -194,8 +219,6 @@ class Test(unittest.TestCase):
 		self.assertTokenLists(expected, actual)
 	
 	def test_rawstr(self):
-		def R(s):
-			return '{}{}{}'.format('{{{', s, '}}}')
 		
 		self.assertTokens(R(''), [S('')])
 		self.assertTokens(R(' \n '), [S(' \n ')])
@@ -204,6 +227,7 @@ class Test(unittest.TestCase):
 		self.assertTokens(R("$"), [S('$')])
 		# Escaping
 		self.assertTokens(R(' \\n '), [S(' \\n ')])
+		self.assertTokens(R('${{'), [S('${')])
 		# Braces are just plain
 		self.assertTokens(R("{"), [S('{')])
 		self.assertTokens(R("{{"), [S('{{')])
@@ -211,7 +235,14 @@ class Test(unittest.TestCase):
 		
 		# Interpolation is done with  ${}
 		self.assertTokens(R("${hello}"), [S(''), I('hello'), S('')])
+		self.assertTokens(R(" \n ${ \n Hello \n } \n "), [S(' \n '), W(' \n '), I('Hello'), W(' \n '), S(' \n ')])
 		
+		# Interpolation at the beginning and end of a raw string
+		self.assertTokens(R("Hello ${foo}"), [S('Hello '), I('foo'), S('')])
+		self.assertTokens(R("${foo} Hello "), [S(''), I('foo'), S(' Hello ')])
+		self.assertTokens(R("${foo} Hello ${foo}"), [S(''), I('foo'), S(' Hello '), I('foo'), S('')])
 		
 if __name__ == '__main__':
 	unittest.main()
+
+

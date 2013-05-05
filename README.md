@@ -147,6 +147,20 @@ The above would print:
 	let set C = {1,2,3}
 	
 
-If for some
+If for some reason the need to output a dollar brace sequence "${" use "${{".
+
+The second thing which can be done with rawstrings, is to annotate what kind of string they are, this can, for example, help
+IDEs do syntax highlighting and checking. To annotate a raw string use `@annotation {{{ string }}}`:
+
+```
+
+	@markdown {{{
+	# Header 1
+	
+	## Subheader 1
+		**Important text**
+	}}}
+
+```
 
 [^1]: Although the brace syntax is used for printing expressions, it can also be used to embed any type of code, even more strings which have their own escaped expressions.
