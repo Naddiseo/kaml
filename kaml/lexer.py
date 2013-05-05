@@ -269,7 +269,12 @@ class Lexer(object):
 			self.push('stringsg')
 		elif t.value == '"':
 			self.push('stringdbl')
+		# Push a dummy token
+		t.value = ''
+		t.type = 'STRING_LIT'
+		return t
 	
+		
 	def t_INITIAL_variablestring_RAWBLOCK_BEGIN(self, t):
 		r'\{\{'
 		self.push('rawstr')
@@ -361,10 +366,18 @@ class Lexer(object):
 	def t_stringsg_STRING_END_Q(self, t):
 		r'\''
 		self.pop()
+		# Return a dummy string
+		t.type = 'STRING_LIT'
+		t.value = ''
+		return t
 		
 	def t_stringdbl_STRING_END_Q(self, t):
 		r'"'
 		self.pop()
+		# Return a dummy string
+		t.type = 'STRING_LIT'
+		t.value = ''
+		return t
 	
 	def t_stringsg_stringdbl_INNER(self, t):
 		r'[^\{\'\"\$]+'

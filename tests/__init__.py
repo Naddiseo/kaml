@@ -83,6 +83,7 @@ class Test(unittest.TestCase):
 			raise
 	
 	def assertTokenLists(self, expected_tokens, actual_tokens, msg = None):
+		self.l = Lexer() # Recreate in case a previous test leaves the lexer in a bad state
 		try:
 			self.assertEqual(len(expected_tokens), len(actual_tokens))
 		except AssertionError:
@@ -108,6 +109,7 @@ class Test(unittest.TestCase):
 		
 		# Concatenation with whitespace
 		self.assertTokens("\n'AB'\n 'CD'\n", [W('\n')] + tokens + [W('\n')],)
+		self.assertTokens(" \n 'AB' \n 'CD' \n ", [W(' \n ')] + tokens + [W(' \n ')])
 		
 		# Test escaped quote
 		self.assertTokens(r'"\""', [S('"')])
@@ -116,31 +118,44 @@ class Test(unittest.TestCase):
 		tokens = [S('ABCD')]
 		
 		self.assertTokens('"ABCD"', tokens)
+		self.assertTokens('"AB\nCD"', [S('AB\nCD')])
 		
 		# Concatenation
 		self.assertTokens('"AB""CD"', tokens)
 		
 		# Concatenation with whitespace
 		self.assertTokens('\n "AB"\n "CD"\n ', [W('\n ')] + tokens + [W('\n ')])
+		self.assertTokens(' \n "AB" \n "CD" \n ', [W(' \n ')] + tokens + [W(' \n ')])
 		# Test escaped quote
 		self.assertTokens(r"'\''", [S("'")])
 	
+	def test_string(self):
+		
+		# Mixed strings
+		self.assertTokens(''' \n "AB" \n 'CD' \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
+		self.assertTokens(''' \n 'AB' \n "CD" \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
+	
 	def test_simple_interpolation(self):
 		# Simple var
-		self.assertTokens("'$bar'", [I('$bar')])
+		self.assertTokens("'$bar'", [S(''), I('$bar'), S('')])
 		# Simple var embedded
 		self.assertTokens("'Hello $bar World'", [S('Hello '), I('$bar'), S(' World')])
 		
 		# Simple in DBL
-		self.assertTokens('"$bar"', [I('$bar')])
+		self.assertTokens('"$bar"', [S(''), I('$bar'), S('')])
 		#simple embedded in dbl
 		self.assertTokens('"Hello $bar World"', [S('Hello '), I('$bar'), S(' World')])
 		
 		# Curly var
-		self.assertTokens("'{bar}'", [I('bar')])
-		self.assertTokens('"{bar}"', [I('bar')])
+		self.assertTokens("'{bar}'", [S(''), I('bar'), S('')])
+		self.assertTokens('"{bar}"', [S(''), I('bar'), S('')])
 		self.assertTokens("'Hello {bar} World'", [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('"Hello {bar} World"', [S('Hello '), I('bar'), S(' World')])
+		
+		# Interpolation with strings and whitespace
+		self.assertTokens('''"Hello ""{bar} World"''', [S('Hello '), I('bar'), S(' World')])
+		self.assertTokens(''' "Hello " " {bar} World" ''', [W(' '), S('Hello  '), I('bar'), S(' World'), W(' ')])
+		self.assertTokens(''' "Hello " "{bar} World" ''', [W(' '), S('Hello '), I('bar'), S(' World'), W(' ')])
 	
 	def test_concat_white(self):
 		""" Tests the WS token concatenation in the lexer """
