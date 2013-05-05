@@ -4,9 +4,10 @@ KAML - a templating language influenced from SCSS and Jinja
 *	[Syntax](#syntax)
 	*	[Overview of Syntax](#overview-of-syntax)
 	*	[Comments](#comments)
+	*	[Variables](#variables)
 	*	[Strings](#strings)
 		*	[Quoted Strings](#quoted-strings)
-			*	[Variable Interpolation in Quoted Strings](#variable-interpolation-in-quoted-string)
+			*	[Variable Interpolation in Quoted Strings](#variable-interpolation-in-quoted-strings)
 		*	[Raw Strings](#raw-strings)
 
 <h1 id="syntax">Syntax</h1>
@@ -41,6 +42,15 @@ Comments are as in C++
 
 
 ```
+
+<h2 id="variables">Variables</h2>
+
+Variables in KAML have the same form as names in CSS; they have the following requirements
+
+1.	Must not begin with a number
+2.	May begin with a dash, an underscore, or ascii "A-Z" (upper or lowercase)
+3.	After the first character, may contain any number of letters, numbers, dashes, or underscores.
+
 
 <h2 id="strings">Strings</h2>
 
