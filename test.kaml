@@ -6,7 +6,7 @@ ${bar.bat}
 {bar}
 {bar.bat}
 
--fn element tag #id .classes [attrs] needsClosing = false body {
+-def element tag #id .classes [attrs] needsClosing = false body {
 	'<$tag '
 	-set attrs['id'] = id
 	-set attrs['class'] += ' ' + classes
@@ -14,11 +14,11 @@ ${bar.bat}
 	'>$body</$tag>'
 }
 
--fn div (args) {
+-def div (args) {
 	element 'div' (args);
 }
 
--fn alert *args {
+-def alert *args {
 	div(class = ['alert', type]) {
 		img "images/${type}.jpg";
 		h4 title;
@@ -26,7 +26,7 @@ ${bar.bat}
 	}
 }
 
-fn foo(f) {
+-def foo(f) {
 	f {
 		{alert}
 	}
@@ -45,7 +45,7 @@ div
 	
 }
 
--fn div #foo (x y z) [a, b, c = 2] {
+-def div #foo (x y z) [a, b, c = 2] {
 	
 }
 

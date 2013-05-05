@@ -169,7 +169,7 @@ class Lexer(object):
 		
 	
 	reserved = {k.strip() : k.strip().replace('-', '').upper() for k in """
-	-fn -set -for -if -elif -else -use -while -continue -break
+	-def -set -for -if -elif -else -use -while -continue -break -return
 	or and true false 
 	""".split()}
 	

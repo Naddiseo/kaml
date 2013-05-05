@@ -1,7 +1,8 @@
 import argparse
+from pprint import pprint
 import sys
 
-from kaml.lexer import Lexer
+from kaml.parser import Parser
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--trace', action = 'store_true')
@@ -12,7 +13,18 @@ if __name__ == '__main__':
 	if len(argv) >= 2:
 		args = parser.parse_args(argv[1:])
 		
-		l = Lexer(trace = args.trace)
+		#l = Lexer(trace = args.trace)
+		#with open(args.input_file) as fp:
+		#	for t in l.tokenize(unicode(fp.read())):
+		#		print t
+		
+		p = Parser(debug = True)
+		
 		with open(args.input_file) as fp:
-			for t in l.tokenize(unicode(fp.read())):
-				print t
+			ast = p.parse(fp.read(), debug = 0)
+			
+			if ast in (None, []):
+				ast = '<empty tree>'
+			
+			pprint(ast)
+			print('')
