@@ -1,6 +1,14 @@
 from collections import deque
 from pprint import pformat
 
+__all__ = [
+	'Node', 'BinaryOp', 'TranslationUnit', 'EmptyNode',
+	'FuncDef', 'FuncDecl', 'VariableDecl', 'Suite', 'Stmt',
+	'ReturnStmt', 'IfStmt', 'NumberLiteral', 'StringLiteral',
+	'BoolLiteral', 'GetItem', 'GetAttr', 'FuncCall', 'Assign'
+	
+]
+
 class Scope(object):
 	def __init__(self):
 		self.names = {}
@@ -81,7 +89,7 @@ class ASTNode(object):
 			return False
 		
 		return all([getattr(self, k) == getattr(other, k) for k in self.__slots__])
-	
+
 def to_str(fmt_str):
 	def my__str__(self):
 		return fmt_str.format(self = self)
@@ -144,14 +152,103 @@ class AcceptsList(ASTNode):
 class EmptyNode(ASTNode):
 	__slots__ = ()
 
-@to_str('{self.items!r}')
+@to_str('{self.declarations!r}')
 class TranslationUnit(AcceptsList):
-	__slots__ = ('items',)
+	__slots__ = ('declarations',)
 	
 	def accepts(self, visitor):
 		visitor.visit_translation_unit()
 		
-		for item in self.items:
-			item.accepts(visitor)
+		for declaration in self.declarations:
+			declaration.accepts(visitor)
 
-class Suite(AcceptsList): pass
+@to_str('{{{self.suite!r}}}')
+class Suite(AcceptsList):
+	__slots__ = ('suite',)
+	
+	def accepts(self, visitor):
+		self.scope.push()
+		for item in self.suite:
+			item.verify()
+		
+		self.scope.pop()
+
+@to_str('{self.decl} -> {self.suite}')
+class FuncDef(ASTNode):
+	__slots__ = ('decl', 'suite')
+	
+	
+@to_str('{self.stmt!r}')
+class Stmt(ASTNode): 
+	__slots__ = ('stmt',)
+
+@to_str('if ({self.condition}) {self.true_suite!r}{self.false_suite!r}')
+class IfStmt(Stmt):
+	__slots__ = ('condition', 'true_suite', 'false_suite')
+
+@to_str('Function {self.ret_type} {self.name}({self.args})')
+class FuncDecl(ASTNode):
+	__slots__ = ('ret_type', 'name', 'args')
+		
+
+@to_str('Var<{self.type}>({self.name}, {self.initial})')
+class VariableDecl(ASTNode):
+	__slots__ = ('type', 'name', 'initial')
+
+@to_str('Return({self.expr})')
+class ReturnStmt(Stmt):
+	__slots__ = ('expr',)
+
+@to_str('Ident({self.name})')
+class Identifier(ASTNode):
+	__slots__ = ('name',)
+
+@to_str('Number({self.number})')
+class NumberLiteral(ASTNode):
+	__slots__ = ('number',)
+
+@to_str('Bool({self.value})')
+class BoolLiteral(ASTNode):
+	__slots__ = ('value',)
+
+@to_str('String({self.value!r})')
+class StringLiteral(ASTNode):
+	__slots__ = ('value',)
+
+@to_str('Character({self.value!r}')
+class CharacterLiteral(ASTNode):
+	__slots__ = ('value',)
+
+@to_str('RV({self.expr})')
+class Expr(ASTNode):
+	__slots__ = ('expr',)
+		
+@to_str('Unary({self.op}, {self.expr})')
+class UnaryOp(Expr):
+	__slots__ = ('op', 'expr')
+
+@to_str('Op({self.op})({self.lhs}, {self.rhs})')
+class BinaryOp(Expr):
+	__slots__ = ('lhs', 'op', 'rhs')
+
+@to_str('Assign({self.lhs} -> {self.rhs})')
+class Assign(BinaryOp): pass
+
+@to_str('Rel({self.lhs} {self.op} {self.rhs})')
+class RelationOp(BinaryOp): pass
+
+@to_str('{self.base_expr}[{self.substcript}]')
+class GetItem(Expr):
+	__slots__ = ('base_expr', 'subscript')
+	
+@to_str('{self.base_expr}[{self.substcript}]')
+class GetAttr(Expr):
+	__slots__ = ('base_expr', 'subscript')
+
+@to_str('{self.fn_name}({self.params})')
+class FuncCall(Expr):
+	__slots__ = ('fn_name', 'params')
+
+class Trailer(Expr):
+	__expr__ = ('expr', 'trailer')
+	def __str__(self): return 'Sub({}[{}])'.format(self.expr, self.trailer)

@@ -23,6 +23,11 @@ class Lexer(object):
 		self.tok_stack.append(t)
 	
 	def tokenize(self, data):
+		for t in self._tokenize(data):
+			if t and t.type != 'WS':
+				yield t 
+	
+	def _tokenize(self, data):
 		self.lexer.input(unicode(data))
 		while True:
 			tok = self._get_token()
@@ -183,7 +188,7 @@ class Lexer(object):
 		'ADDEQ', 'SUBEQ', 'MULEQ', 'DIVEQ', 'MODEQ',
 		'ANDEQ', 'XOREQ', 'OREQ',
 		'SHL', 'SHR', 'SHLEQ', 'SHREQ',
-		'GTE', 'LTE', 'EQ', 'NE', 'GT', 'LT',
+		'GTE', 'LTE', 'EQ', 'NE',
 		
 		# Separater
 		'WS',

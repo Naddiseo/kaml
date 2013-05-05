@@ -12,10 +12,10 @@ class TestLexer(unittest.TestCase):
 	
 	def assertTokens(self, code, tokens = [], filter_ws = False, msg = None):
 		if filter_ws:
-			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t.type != 'WS']
+			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t is not None and t.type != 'WS']
 		else:
-			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code))]
-		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens]
+			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t is not None]
+		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens if t is not None]
 		try:
 			self.assertTokenLists(test_tokens, lexer_tokens, msg)
 		except AssertionError:
