@@ -23,133 +23,27 @@ class Lexer(object):
 		self.tok_stack.append(t)
 	
 	def tokenize(self, data):
-		for t in self._tokenize(data):
-			if t and t.type != 'WS':
-				yield t 
-	
-	def _tokenize(self, data):
 		self.lexer.input(unicode(data))
 		while True:
 			tok = self._get_token()
 				
 			if tok:
 				if tok.type == 'STRING_LIT':
-					for t in self._tokenize_string(tok):
-						yield t
-					
-				elif tok.type == 'WS':
-					# Whitespace can also concatenate
-					ws_tok = lex.LexToken()
-					ws_tok.type = 'WS'
-					ws_tok.lineno = tok.lineno
-					ws_tok.lexpos = tok.lexpos
-					ws_tok.value = ''
-					while tok and tok.type == 'WS':
-						ws_tok.value += tok.value
+					t = lex.LexToken()
+					t.lineno = tok.lineno
+					t.type = 'STRING_LIT'
+					t.lexpos = tok.lexpos
+					t.value = ''
+					# Any whitespace between string_literals can be forgotten
+					while tok and tok.type == 'STRING_LIT':
+						t.value += tok.value
 						tok = self._get_token()
 					
-					yield ws_tok
-					self._push_token(tok)
-				else:
-					yield tok
+					yield t
+					
+				yield tok
 			else:
 				break
-	
-	def _tokenize_string(self, tok):
-		
-		# String literals concatenate when next to each other
-		if tok.type in 'STRING_LIT':
-			stack = []
-			# Any whitespace between string_literals can be forgotten
-			while tok and tok.type in ('STRING_LIT', 'WS'):
-				stack.append(tok)
-				tok = self._get_token()
-			
-			if len(stack):
-				# Since `stack` is only strings and WS, we can divide it into
-				# three sections:
-				#  1 - Initial Whitespace
-				#  2 - Final Whitespace
-				#  3 - All tokens inbetween
-				# The initial and final whitespace can be concatenated into
-				# just one or zero whitespace tokens on each end
-				# then all whitespace in the middle can be dropped, and then
-				# all strings concatenated
-				
-				# Step 1: Concatenate initial whitespace
-				stack = self._concat_ws_tokens(stack, 0)
-				
-				# Step 2: Concatenate final whitespace
-				if stack[-1].type == 'WS':
-					offset = len(stack) - 1
-					for i in reversed(xrange(0, len(stack))):
-						if stack[i].type == 'STRING_LIT':
-							offset = i + 1
-							break
-					stack = self._concat_ws_tokens(stack, offset)
-				
-				# At this point, there should only be an optional WS token
-				# at the beginning and end
-				l = len(stack)
-				
-				if l > 1:
-					start = 0
-					end = l
-					if stack[0].type == 'WS':
-						start = 1
-					if stack[-1].type == 'WS':
-						end = l - 1
-					
-					s_tok = lex.LexToken()
-					s_tok.type = 'STRING_LIT'
-					s_tok.value = ''
-					s_tok.lineno = stack[start].lineno
-					s_tok.lexpos = stack[start].lexpos
-					
-					last_tok = None
-					
-					for i in xrange(start, end):
-						last_tok = stack[i]
-						if last_tok.type == 'STRING_LIT':
-							s_tok.value += last_tok.value
-					
-					assert last_tok.type == 'STRING_LIT'
-					stack_begin = stack[:start]
-					stack_end = stack[end :]
-					stack = stack_begin + [s_tok] + stack_end
-				# Now yield the modified stack
-				for t in stack:
-					yield t
-		
-		if tok:
-			yield tok
-	
-	def _concat_ws_tokens(self, tokens, offset):
-		start_offset = offset
-		tok = tokens[offset]
-		l = len(tokens)
-		
-		if tok.type == 'WS':
-			value = ''
-			while tok and tok.type == 'WS':
-				value += tok.value
-				offset += 1
-				if offset < l:
-					tok = tokens[offset]
-				else:
-					break
-			
-			tok = lex.LexToken()
-			tok.type = 'WS'
-			tok.value = value
-			tok.lineno = tokens[start_offset].lineno
-			tok.lexpos = tokens[start_offset].lexpos
-			
-			tokens_start = tokens[:start_offset]
-			tokens_end = tokens[offset:]
-			tokens = tokens_start + [tok] + tokens_end
-				
-		return tokens
 	
 	def find_tok_column(self, token):
 		last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)
@@ -190,9 +84,6 @@ class Lexer(object):
 		'SHL', 'SHR', 'SHLEQ', 'SHREQ',
 		'GTE', 'LTE', 'EQ', 'NE',
 		
-		# Separater
-		'WS',
-		
 	]
 	
 	literals = [
@@ -225,7 +116,7 @@ class Lexer(object):
 	t_INITIAL_variablestring_XOREQ = r'^='
 	t_INITIAL_variablestring_OREQ = r'\|='
 	
-	t_INITIAL_variablestring_WS = r'[\t ]'
+	t_INITIAL_variablestring_ignore = '[\t ]'
 	
 	
 	states = (
@@ -250,8 +141,6 @@ class Lexer(object):
 	def NL(self, t):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
-		t.type = 'WS'
-		return t
 	
 	t_INITIAL_variablestring_NL = NL
 	
@@ -313,7 +202,8 @@ class Lexer(object):
 		
 		#return t
 	# End Variable Interpolation ========
-	t__rawstr_NL = NL
+	t_rawstr_NL = NL
+	t_rawstr_ignore = r''
 	
 	def t_rawstr_VAR_STRING_START2(self, t):
 		r'\$\{(?!\{)'
@@ -358,6 +248,7 @@ class Lexer(object):
 	
 	# String Literals =====
 	t_stringsg_stringdbl_NL = NL
+	t_stringsg_stringdbl_ignore = r''
 	
 	def t_stringsg_stringdbl_ESCAPE_CHAR(self, t):
 		r'\\[0-9a-fA-F]{1, 6}(\r\n | [ \n\r\t\f])? | \\[^\n\r\f0-9a-fA-F]'

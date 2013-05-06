@@ -3,19 +3,16 @@ import unittest
 
 
 from kaml import Lexer
-from .utils import R, S, I, W, T, N
+from .utils import R, S, I, T, N
 
 class TestLexer(unittest.TestCase):
 	
 	def setUp(self):
 		self.l = Lexer()
 	
-	def assertTokens(self, code, tokens = [], filter_ws = False, msg = None):
-		if filter_ws:
-			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t is not None and t.type != 'WS']
-		else:
-			lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t is not None]
-		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens if t is not None]
+	def assertTokens(self, code, tokens = [], msg = None):
+		lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t]
+		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens if t]
 		try:
 			self.assertTokenLists(test_tokens, lexer_tokens, msg)
 		except AssertionError:
@@ -34,19 +31,18 @@ class TestLexer(unittest.TestCase):
 			self.assertEqual(expected, actual, msg)
 	
 	def test_kw_tokens(self):
-		code = "-fn -set -for -if -elif -else -use -while -continue -break or and true false"
+		code = "-def -set -for -if -elif -else -use -while -continue -break or and true false"
 		tokens = [T(t.replace('-', '').upper()) for t in code.split()]
 		
-		self.assertTokens(code, tokens, filter_ws = True)
+		self.assertTokens(code, tokens)
 	
 	def test_idents(self):
 		self.assertTokens(
 			"simplevar simple_var2 simple-var -simplevar -simple-var",
 			[I('simplevar'), I('simple_var2'), I('simple-var'), I('-simplevar'), I('-simple-var')],
-			filter_ws = True
 		)
 		
-		self.assertTokens('0-ident', [N('0'), I('-ident')], filter_ws = True)
+		self.assertTokens('0-ident', [N('0'), I('-ident')])
 		self.assertTokens('ident-0-ent', [I('ident-0-ent')])
 	
 	def test_numbers(self):
@@ -61,8 +57,8 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens("'AB''CD'", tokens)
 		
 		# Concatenation with whitespace
-		self.assertTokens("\n'AB'\n 'CD'\n", [W('\n')] + tokens + [W('\n')],)
-		self.assertTokens(" \n 'AB' \n 'CD' \n ", [W(' \n ')] + tokens + [W(' \n ')])
+		self.assertTokens("\n'AB'\n 'CD'\n", tokens)
+		self.assertTokens(" \n 'AB' \n 'CD' \n ", tokens)
 		
 		# Test escaped quote
 		self.assertTokens(r'"\""', [S('"')])
@@ -80,8 +76,8 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens('"AB""CD"', tokens)
 		
 		# Concatenation with whitespace
-		self.assertTokens('\n "AB"\n "CD"\n ', [W('\n ')] + tokens + [W('\n ')])
-		self.assertTokens(' \n "AB" \n "CD" \n ', [W(' \n ')] + tokens + [W(' \n ')])
+		self.assertTokens('\n "AB"\n "CD"\n ', tokens)
+		self.assertTokens(' \n "AB" \n "CD" \n ', tokens)
 		# Test escaped quote
 		self.assertTokens(r"'\''", [S("'")])
 		# escaped braces
@@ -91,14 +87,14 @@ class TestLexer(unittest.TestCase):
 	def test_string(self):
 		
 		# Mixed strings
-		self.assertTokens(''' \n "AB" \n 'CD' \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
-		self.assertTokens(''' \n 'AB' \n "CD" \n ''', [W(' \n '), S('ABCD'), W(' \n ')])
-		self.assertTokens(''' \n {} \n "CD" \n 'EF' \n '''.format(R('AB')), [W(' \n '), S('ABCDEF'), W(' \n ')])
-		self.assertTokens(''' \n {} \n 'CD' \n "EF" \n '''.format(R('AB')), [W(' \n '), S('ABCDEF'), W(' \n ')])
-		self.assertTokens(''' \n "AB" \n {} \n 'EF' \n '''.format(R('CD')), [W(' \n '), S('ABCDEF'), W(' \n ')])
-		self.assertTokens(''' \n 'AB' \n {} \n "EF" \n '''.format(R('CD')), [W(' \n '), S('ABCDEF'), W(' \n ')])
-		self.assertTokens(''' \n "AB" \n 'CD' \n {} \n '''.format(R('EF')), [W(' \n '), S('ABCDEF'), W(' \n ')])
-		self.assertTokens(''' \n 'AB' \n "CD" \n {} \n '''.format(R('EF')), [W(' \n '), S('ABCDEF'), W(' \n ')])
+		self.assertTokens(''' \n "AB" \n 'CD' \n ''', [ S('ABCD'), ])
+		self.assertTokens(''' \n 'AB' \n "CD" \n ''', [S('ABCD'), ])
+		self.assertTokens(''' \n {} \n "CD" \n 'EF' \n '''.format(R('AB')), [S('ABCDEF')])
+		self.assertTokens(''' \n {} \n 'CD' \n "EF" \n '''.format(R('AB')), [S('ABCDEF')])
+		self.assertTokens(''' \n "AB" \n {} \n 'EF' \n '''.format(R('CD')), [S('ABCDEF')])
+		self.assertTokens(''' \n 'AB' \n {} \n "EF" \n '''.format(R('CD')), [S('ABCDEF')])
+		self.assertTokens(''' \n "AB" \n 'CD' \n {} \n '''.format(R('EF')), [S('ABCDEF')])
+		self.assertTokens(''' \n 'AB' \n "CD" \n {} \n '''.format(R('EF')), [S('ABCDEF')])
 	
 	def test_simple_interpolation(self):
 		# Simple var
@@ -119,14 +115,14 @@ class TestLexer(unittest.TestCase):
 		
 		# Interpolation with strings and whitespace
 		self.assertTokens('''"Hello ""{bar} World"''', [S('Hello '), I('bar'), S(' World')])
-		self.assertTokens(''' "Hello " " {bar} World" ''', [W(' '), S('Hello  '), I('bar'), S(' World'), W(' ')])
-		self.assertTokens(''' "Hello " "{bar} World" ''', [W(' '), S('Hello '), I('bar'), S(' World'), W(' ')])
+		self.assertTokens(''' "Hello " " {bar} World" ''', [S('Hello  '), I('bar'), S(' World')])
+		self.assertTokens(''' "Hello " "{bar} World" ''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('''"Hello {bar}"" World"''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('''"Hello {bar}" " World"''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('''"Hello {bar} ""World"''', [S('Hello '), I('bar'), S(' World')])
 		self.assertTokens('''"Hello {bar} " "World"''', [S('Hello '), I('bar'), S(' World')])
 		
-		self.assertTokens('''" Hello {\nbar\n} World"''', [S(' Hello '), W('\n'), I('bar'), W('\n'), S(' World')])
+		self.assertTokens('''" Hello {\nbar\n} World"''', [S(' Hello '), I('bar'), S(' World')])
 		
 		# Dollar curly
 		self.assertTokens("'${bar}'", [S(''), I('bar'), S('')])
@@ -141,16 +137,6 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens('"$"', [S('$')])
 		self.assertTokens("'$ '", [S('$ ')])
 		self.assertTokens('"$ "', [S('$ ')])
-	
-	def test_concat_white(self):
-		""" Tests the WS token concatenation in the lexer """
-		
-		tokens1 = map(T, [('WS', ' '), ('WS', ' '), ('WS', ' ')])
-		expected = map(T, [('WS', '   ')])
-		
-		actual = self.l._concat_ws_tokens(tokens1, 0)
-		
-		self.assertTokenLists(expected, actual)
 	
 	def test_rawstr(self):
 		
@@ -169,7 +155,7 @@ class TestLexer(unittest.TestCase):
 		
 		# Interpolation is done with  ${}
 		self.assertTokens(R("${hello}"), [S(''), I('hello'), S('')])
-		self.assertTokens(R(" \n ${ \n Hello \n } \n "), [S(' \n '), W(' \n '), I('Hello'), W(' \n '), S(' \n ')])
+		self.assertTokens(R(" \n ${ \n Hello \n } \n "), [S(' \n '), I('Hello'), S(' \n ')])
 		
 		# Interpolation at the beginning and end of a raw string
 		self.assertTokens(R("Hello ${foo}"), [S('Hello '), I('foo'), S('')])

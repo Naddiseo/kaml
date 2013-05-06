@@ -74,10 +74,6 @@ def I(_id):
 def K(kw):
 	return (kw, '-{}'.format(kw.lower()))
 
-def W(_w = None):
-	#return ('WS', _w)
-	return None
-
 def L(_l):
 	return (_l, _l)
 # -------------------------------

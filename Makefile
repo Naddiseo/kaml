@@ -4,7 +4,11 @@ run:
 
 trace:
 	clear
-	python main.py -t test1.kaml
+	python main.py -t -l test1.kaml
+
+lex:
+	clear
+	python main.py -l test1.kaml
 
 test:
 	clear
