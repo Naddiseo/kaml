@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import unittest
 
 
-from kaml import Lexer
+from kaml.lexer import Lexer
 from .utils import R, S, I, T, N
 
 class TestLexer(unittest.TestCase):

@@ -77,13 +77,13 @@ class Parser(object):
 	def p_top_level_block_item(self, p):
 		''' top-level-block-item : use-statement
 		                         | function-definition
-		                         | string-literal %prec UMINUS
 		                         | statement
 		'''
 		p[0] = p[1]
 	
 	def p_use_statement(self, p):
 		''' use-statement : USE package-import ';'
+		                  | USE package-import '.' '*' ';'
 		'''
 	
 	def p_package_import(self, p):
@@ -161,8 +161,13 @@ class Parser(object):
 		              | jump-statement
 		              | declaration-statement
 		              | loop-statement
+		              | set-statement
 		'''
 		p[0] = p[1]
+	
+	def p_set_statement(self, p):
+		''' set-statement : SET assignment-expression ';'
+		'''
 	
 	def p_loop_statement(self, p):
 		''' loop-statement : for-loop

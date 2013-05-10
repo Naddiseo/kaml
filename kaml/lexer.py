@@ -11,6 +11,7 @@ class Lexer(object):
 		self.lexer = lex.lex(module = self, reflags = re.U, debuglog = self.log, **kwargs)
 		self.lexer.lextokens['{'] = 1
 		self.lexer.lextokens['}'] = 1
+		self.lexer.lextokens[';'] = 1
 		self.nesting = 0
 		self.tok_stack = []
 	
@@ -142,7 +143,11 @@ class Lexer(object):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
 	
-	t_INITIAL_variablestring_NL = NL
+	def t_INITIAL_variablestring_NL(self, t):
+		r'\s*\n+\s*'
+		t.lexer.lineno += len(t.value)
+		t.type = ';'
+		return t
 	
 	def t_INITIAL_variablestring_ID(self, t):
 		r'[a-zA-Z_\-][a-zA-Z_0-9\-]*'

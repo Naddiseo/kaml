@@ -21,7 +21,7 @@ if __name__ == '__main__':
 				for t in l.tokenize(unicode(fp.read())):
 					print t
 			else:
-				p = Parser(debug = True)
+				p = Parser(debug = True, write_tables = 0)
 				
 				ast = p.parse(fp.read(), debug = 0)
 				
