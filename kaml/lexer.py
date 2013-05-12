@@ -40,7 +40,6 @@ class Lexer(object):
 						tok = self._get_token()
 					
 					yield t
-					continue
 				yield tok
 			else:
 				break
@@ -124,6 +123,7 @@ class Lexer(object):
 		('stringdbl', 'exclusive'),
 		('variablestring', 'exclusive'),
 		('rawstr', 'exclusive'),
+		('comment', 'exclusive')
 	)
 	
 	def t_error(self, t):
@@ -137,10 +137,21 @@ class Lexer(object):
 	
 	def t_rawstr_error(self, t):
 		print("Error in rawstr")
+		
+	def t_comment_error(self, t):
+		print("Error in comment")
 	
 	def NL(self, t):
 		r'\n+'
 		t.lexer.lineno += len(t.value)
+	
+	def t_INITIAL_variablestring_SGCOMMENT(self, t):
+		r'\/\/[^\n]*(\n|$)'
+		t.lexer.lineno += 1
+	
+	def t_INITIAL_variablestring_MLCOMMENT(self, t):
+		r'\/\*'
+		self.push('comment')
 	
 	def t_INITIAL_variablestring_NL(self, t):
 		r'\s*\n+\s*'
@@ -181,6 +192,17 @@ class Lexer(object):
 		t.value = ''
 		t.type = 'STRING_LIT'
 		return t
+	
+	# Multiline Comments
+	t_comment_ignore = r''
+	
+	def t_comment_END(self, t):
+		r'(?<!\\)\*\/'
+		self.pop()
+	
+	def t_comment_inner(self, t):
+		r'[^\*]+'
+		# Ignore
 	
 	# Variable interpolation
 	def t_variablestring_LBRACE(self, t):

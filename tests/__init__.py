@@ -3,4 +3,5 @@ import unittest
 
 if __name__ == '__main__':
 	from .test_lexer import TestLexer
+	from .test_parser import TestParser
 	unittest.main()

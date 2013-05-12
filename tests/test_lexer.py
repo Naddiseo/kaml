@@ -3,7 +3,7 @@ import unittest
 
 
 from kaml.lexer import Lexer
-from .utils import R, S, I, T, N
+from .utils import R, S, I, T, N, K
 
 class TestLexer(unittest.TestCase):
 	
@@ -44,6 +44,12 @@ class TestLexer(unittest.TestCase):
 		
 		self.assertTokens('0-ident', [N('0'), I('-ident')])
 		self.assertTokens('ident-0-ent', [I('ident-0-ent')])
+	
+	def test_comments(self):
+		self.assertTokens("// This is a comment", [])
+		self.assertTokens('//this is a comment\n//this is on the next line', [])
+		self.assertTokens('/* Hello \nWorld */', [])
+		self.assertTokens('-def /* comment */ fn() {}', [K('def'), I('fn'), T('('), T(')'), T('{'), T('}')])
 	
 	def test_numbers(self):
 		pass

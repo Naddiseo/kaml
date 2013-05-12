@@ -72,7 +72,7 @@ def I(_id):
 	return ('ID', _id)
 
 def K(kw):
-	return (kw, '-{}'.format(kw.lower()))
+	return (kw.upper(), '-{}'.format(kw.lower()))
 
 def L(_l):
 	return (_l, _l)

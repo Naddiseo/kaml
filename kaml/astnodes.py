@@ -203,9 +203,9 @@ def WhileStmt(Stmt):
 def ForStmt(Stmt):
 	__slots__ = ('expressions', 'suite')
 
-@to_str('Function {self.ret_type} {self.name}({self.args})')
+@to_str('Function {self.name}({self.args})')
 class FuncDecl(ASTNode):
-	__slots__ = ('ret_type', 'name', 'args')
+	__slots__ = ('name', 'args')
 		
 
 @to_str('Var({self.name}, {self.initial})')

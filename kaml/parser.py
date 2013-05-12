@@ -109,7 +109,7 @@ class Parser(object):
 	def p_function_decl(self, p):
 		''' function-decl : DEF ID '(' parameter-decl-seq ')'
 		'''
-		p[0] = FuncDecl(p[1], p[2], p[4])
+		p[0] = FuncDecl(p[2], p[4])
 	
 	def p_function_body(self, p):
 		''' function-body : compound-statement 
