@@ -52,7 +52,9 @@ class Parser(object):
 		return list_thing
 	
 	def p_error(self, p):
-		print 'Parser Error:', p
+		if p is not None:
+			loc = self.lexer._make_tok_location(p)
+			print('Parser Error[{}:{}]: {}'.format(loc[0], loc[1], p))
 		raise ParseException('Parser Error: {}'.format(p))
 	
 	def p_translation_unit(self, p):
@@ -85,12 +87,20 @@ class Parser(object):
 		''' use-statement : USE package-import ';'
 		                  | USE package-import '.' '*' ';'
 		'''
+		if len(p) == 4:
+			p[0] = p[2]
+		else:
+			p[0] = UseStmt(p[2], p[4])
 	
 	def p_package_import(self, p):
 		''' package-import : ID 
 		                   | package-import '.' ID
 		'''
-	
+		if len(p) == 2:
+			p[0] = p[1]
+		else:
+			p[0] = UseStmt(p[1], p[3])
+		
 	def p_function_definition(self, p):
 		''' function-definition : function-decl function-body
 		'''
@@ -110,25 +120,25 @@ class Parser(object):
 	# but without the second rule it would require the first
 	# parameter to always be followed by a comma.
 	def p_parameter_decl_seq(self, p):
-		''' parameter-decl-seq : 
-		                       | parameter-decl
-		                       | parameter-decl ',' parameter-decl-seq
+		''' parameter-decl-seq :
+		                       | parameter-decl optional-assign
+		                       | parameter-decl optional-assign ',' parameter-decl-seq 
 		'''
 		if len(p) == 1:
 			p[0] = []
 		elif len(p) == 2:
-			p[0] = [p[1]]
+			p[0] = [VariableDecl(p[1], p[2])]
 		else:
 			p[0] = [p[1]] + p[3]
 	
 	def p_parameter_decl(self, p):
-		''' parameter-decl : ID optional-assign
+		''' parameter-decl : ID
 		'''
-		p[0] = VariableDecl(p[1], p[2], p[3] or None)
+		p[0] = p[1]
 	
 	def p_optional_assign(self, p):
 		'''
-		optional-assign : 
+		optional-assign :
 		                | '=' assignment-expression
 		'''
 		if len(p) == 1:
@@ -168,19 +178,23 @@ class Parser(object):
 	def p_set_statement(self, p):
 		''' set-statement : SET assignment-expression ';'
 		'''
+		p[0] = SetStmt(p[2])
 	
 	def p_loop_statement(self, p):
 		''' loop-statement : for-loop
 		                   | while-loop
 		'''
+		p[0] = p[1]
 	
 	def p_for_loop(self, p):
 		''' for-loop : FOR '(' expression-list ')' compound-statement 
 		'''
+		p[0] = ForStmt(p[3], p[5])
 	
 	def p_while_loop(self, p):
 		''' while-loop : WHILE '(' expression ')' compound-statement
 		'''
+		p[0] = WhileStmt(p[2], p[4])
 	
 	def p_expression_statement(self, p):
 		''' expression-statement : expression ';'
@@ -221,9 +235,9 @@ class Parser(object):
 		p[0] = Stmt(p[1])
 	
 	def p_block_declaration(self, p):
-		''' block-declaration : parameter-decl ';'
+		''' block-declaration : ID '=' assignment-expression ';'
 		'''
-		p[0] = p[1]
+		p[0] = VariableDecl(p[1], p[3])
 		
 	def p_literal(self, p):
 		''' literal : integer-literal
@@ -245,10 +259,21 @@ class Parser(object):
 		p[0].ret_type = float
 	
 	def p_string_literal(self, p):
-		''' string-literal : STRING_LIT '''
-		p[0] = StringLiteral(p[1])
-		p[0].ret_type = str
-	
+		''' string-literal : STRING_LIT 
+		                   | string-literal STRING_LIT
+		'''
+		if len(p) == 2:
+			p[0] = StringLiteral(p[1])
+			p[0].ret_type = str
+		else:
+			if p[0] is not None:
+				p[0].value += p[2].value
+			else:
+				if isinstance(p[1], StringLiteral):
+					p[1].value += p[2]
+					p[0] = p[1]
+				else:
+					p[0] = StringLiteral(p[2])
 	
 	def p_boolean_literal(self, p):
 		''' boolean-literal : TRUE
@@ -447,7 +472,7 @@ class Parser(object):
 			p[0] = p[1]
 		else:
 			p[0] = Assign(p[1], p[2], p[3])
-			p[0].ret_type = p[3].ret_type
+			p[0].ret_type = getattr(p[3], 'ret_type', type(p[3]))
 	
 	def p_assignment_operator(self, p):
 		''' assignment-operator : '='

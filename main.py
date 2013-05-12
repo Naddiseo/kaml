@@ -23,7 +23,7 @@ if __name__ == '__main__':
 			else:
 				p = Parser(debug = True, write_tables = 0)
 				
-				ast = p.parse(fp.read(), debug = 0)
+				ast = p.parse(fp.read(), debug = args.trace)
 				
 				if ast in (None, []):
 					ast = '<empty tree>'

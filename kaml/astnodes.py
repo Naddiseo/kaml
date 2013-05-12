@@ -3,9 +3,14 @@ from pprint import pformat
 
 __all__ = [
 	'Node', 'BinaryOp', 'TranslationUnit', 'EmptyNode',
-	'FuncDef', 'FuncDecl', 'VariableDecl', 'Suite', 'Stmt',
-	'ReturnStmt', 'IfStmt', 'NumberLiteral', 'StringLiteral',
-	'BoolLiteral', 'GetItem', 'GetAttr', 'FuncCall', 'Assign'
+	
+	'FuncDef', 'FuncDecl', 'VariableDecl', 'Suite',
+	
+	'Stmt', 'UseStmt', 'SetStmt', 'ReturnStmt', 'IfStmt', 'WhileStmt', 'ForStmt',
+	
+	'NumberLiteral', 'StringLiteral', 'BoolLiteral',
+	
+	'GetItem', 'GetAttr', 'FuncCall', 'Assign'
 	
 ]
 
@@ -182,18 +187,34 @@ class FuncDef(ASTNode):
 class Stmt(ASTNode): 
 	__slots__ = ('stmt',)
 
+@to_str('Use({self.root!r}->{self.child!r})')
+class UseStmt(Stmt):
+	__slots__ = ('root', 'child')
+
 @to_str('if ({self.condition}) {self.true_suite!r}{self.false_suite!r}')
 class IfStmt(Stmt):
 	__slots__ = ('condition', 'true_suite', 'false_suite')
+
+@to_str('while ({self.condition}) {self.suite!r}')
+def WhileStmt(Stmt):
+	__slots__ = ('condition', 'suite')
+
+@to_str('for ({self.expressions}) {self.suite}')
+def ForStmt(Stmt):
+	__slots__ = ('expressions', 'suite')
 
 @to_str('Function {self.ret_type} {self.name}({self.args})')
 class FuncDecl(ASTNode):
 	__slots__ = ('ret_type', 'name', 'args')
 		
 
-@to_str('Var<{self.type}>({self.name}, {self.initial})')
+@to_str('Var({self.name}, {self.initial})')
 class VariableDecl(ASTNode):
-	__slots__ = ('type', 'name', 'initial')
+	__slots__ = ('name', 'initial')
+
+@to_str('Set({self.name}) = {self.value}')
+class SetStmt(Stmt):
+	__slots__ = ('name', 'value')
 
 @to_str('Return({self.expr})')
 class ReturnStmt(Stmt):
