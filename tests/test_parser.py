@@ -1,5 +1,11 @@
 from __future__ import unicode_literals
+import sys
 import unittest
+
+if sys.version_info[0] == 3:
+	string_types = str
+else:
+	string_types = basestring
 
 from kaml.astnodes import * #@UnusedWildImport
 from kaml.parser import Parser, ParseException
@@ -30,7 +36,7 @@ class TestParser(unittest.TestCase):
 			self.p.parse(code)
 	
 	def assertTree(self, ast, tree = [], msg = None):
-		if isinstance(ast, str):
+		if isinstance(ast, string_types):
 			ast = self.p.parse(ast)
 		
 		self.assertEqual(tree, ast, msg)
@@ -48,10 +54,14 @@ class TestParser(unittest.TestCase):
 	def assertStmts(self, code, msg = None):
 		self.assertParses(self._get_stmt_code(code), msg)
 	
-	
 	def test_empty(self):
 		self.assertParses('\n   \t')
 	
 	def test_comment(self):
-		code = '// One line Comment\n  '
-		self.assertParses(code)
+		self.assertParses('// One line Comment\n  ')
+		self.assertParses('// Line 1\n//Line 2')
+		self.assertParses('/* multi\nline\ncomment*/')
+		self.assertParses('-def /*inline comment */ fn(){}')
+	
+	def test_use(self):
+		self.assertTree('-use foo;', [UseStmt('foo', '')])

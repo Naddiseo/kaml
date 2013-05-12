@@ -1,8 +1,10 @@
+from __future__ import unicode_literals
+import itertools
+
 from ply import yacc
 
 from kaml.lexer import Lexer
 from kaml.astnodes import *
-import itertools
 
 class ParseException(Exception):pass
 
@@ -55,6 +57,10 @@ class Parser(object):
 		if p is not None:
 			loc = self.lexer._make_tok_location(p)
 			print('Parser Error[{}:{}]: {}'.format(loc[0], loc[1], p))
+		else:
+			print("Parser Error, inserting ';'")
+			# Just guess, and hope that the error occurred in a statement
+			return ';'
 		raise ParseException('Parser Error: {}'.format(p))
 	
 	def p_translation_unit(self, p):
@@ -97,7 +103,7 @@ class Parser(object):
 		                   | package-import '.' ID
 		'''
 		if len(p) == 2:
-			p[0] = p[1]
+			p[0] = UseStmt(p[1], '')
 		else:
 			p[0] = UseStmt(p[1], p[3])
 		
