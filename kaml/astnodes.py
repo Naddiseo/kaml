@@ -254,10 +254,13 @@ class ParamSeq(ASTNode):
 			args = []
 		if not kwargs:
 			kwargs = {}
-		super(ParamSeq, self).__init__(args, None, None, kwargs)
+		super(ParamSeq, self).__init__(list(args), None, None, kwargs)
 	
 	def add_positional(self, arg):
 		self.positional.append(arg)
+	
+	def __riadd__(self, lhs):
+		raise "EHHLO"
 	
 	def __iadd__(self, other):
 		if isinstance(other, VariableDecl):
@@ -267,9 +270,9 @@ class ParamSeq(ASTNode):
 			self.kwargs.update(other.kwargs)
 		
 		elif isinstance(other, HashDecl):
-			if self.has_arg is not None:
+			if self.hash_arg is not None:
 				raise ASTException(other, 'Node already has a hash_arg')
-			self.has_arg = other
+			self.hash_arg = other
 		
 		elif isinstance(other, DotDecl):
 			if self.dot_args is None:
@@ -280,6 +283,20 @@ class ParamSeq(ASTNode):
 		elif isinstance(other, (list, tuple)):
 			for item in other:
 				self +=item
+		
+		elif isinstance(other, ParamSeq):
+			self.positional += other.positional
+			self.kwargs.update(other.kwargs)
+			
+			if self.hash_arg is not None and other.hash_arg is not None:
+				raise ASTException(other, 'Node already has a hash_arg')
+			self.hash_arg = other.hash_arg
+			
+			if self.dot_args is None:
+				self.dot_args = other.dot_args
+			
+			else:
+				self.dot_args += other.dot_args
 		
 		else:
 			raise ASTException(other, 'Tried to add incompatible ast to ParamSeq')

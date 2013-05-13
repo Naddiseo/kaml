@@ -148,12 +148,16 @@ class Parser(object):
 	
 	def p_parameter_decl_list(self, p):
 		''' parameter-decl-list : parameter-decl optional-assign
-		                        | parameter-decl optional-assign ',' parameter-decl-list
+		                        | parameter-decl optional-assign ',' parameter-decl-seq
 		'''
-		p[0] = [VariableDecl(p[1], p[2])]
+		s = ParamSeq() if not isinstance(p[0], ParamSeq) else p[0]
+		
+		s += VariableDecl(p[1], p[2])
 		
 		if len(p) == 5:
-			p[0] += p[4]
+			s += p[4]
+		
+		p[0] = s
 	
 	def p_kwarg_param_decl(self, p):
 		''' kwarg-param-decl : '[' parameter-decl-list ']'

@@ -57,26 +57,26 @@ class TestParser(unittest.TestCase):
 	def assertStmts(self, code, msg = None):
 		self.assertParses(self._get_stmt_code(code), msg)
 	
-#	def test_empty(self):
-#		self.assertParses('\n   \t')
-#	
-#	def test_comment(self):
-#		self.assertParses('// One line Comment\n  ')
-#		self.assertParses('// Line 1\n//Line 2')
-#		self.assertParses('/* multi\nline\ncomment*/')
-#		self.assertParses('-def /*inline comment */ fn(){}')
-#	
-#	def test_use(self):
-#		self.assertTree('-use foo;', TranslationUnit(UseStmt('foo', '')))
-#		self.assertTree('-use foo.bar;', TranslationUnit(UseStmt('foo', 'bar')))
-#		self.assertTree('-use foo.bar.baz;', TranslationUnit(UseStmt(UseStmt('foo', 'bar'), 'baz')))
-#		self.assertTree('-use foo.*;', TranslationUnit(UseStmt('foo', '*')))
-#		
-#		self.assertTree('-use foo;-use bar;', TranslationUnit(UseStmt('foo', ''), UseStmt('bar', '')))
-#		
-#		self.assertNotParses('-use *;')
-#		self.assertParses('-use -foo.-bar;')
-#	
+	def test_empty(self):
+		self.assertParses('\n   \t')
+	
+	def test_comment(self):
+		self.assertParses('// One line Comment\n  ')
+		self.assertParses('// Line 1\n//Line 2')
+		self.assertParses('/* multi\nline\ncomment*/')
+		self.assertParses('-def /*inline comment */ fn(){}')
+	
+	def test_use(self):
+		self.assertTree('-use foo;', TranslationUnit(UseStmt('foo', '')))
+		self.assertTree('-use foo.bar;', TranslationUnit(UseStmt('foo', 'bar')))
+		self.assertTree('-use foo.bar.baz;', TranslationUnit(UseStmt(UseStmt('foo', 'bar'), 'baz')))
+		self.assertTree('-use foo.*;', TranslationUnit(UseStmt('foo', '*')))
+		
+		self.assertTree('-use foo;-use bar;', TranslationUnit(UseStmt('foo', ''), UseStmt('bar', '')))
+		
+		self.assertNotParses('-use *;')
+		self.assertParses('-use -foo.-bar;')
+	
 	def test_function_def(self):
 		self.assertTree('-def fn(){}', self._get_stmt_tree(None))
 		self.assertTree('-def fn(arg1){}', self._get_stmt_tree(None, VariableDecl('arg1', [])))
@@ -124,10 +124,10 @@ class TestParser(unittest.TestCase):
 			)
 		)
 		self.assertTree('-def fn(arg1=1, arg2=0,){}',
-			self._get_stmt_tree(None, [
+			self._get_stmt_tree(None,
 				VariableDecl('arg1', NumberLiteral(1)),
 				VariableDecl('arg2', NumberLiteral(0))
-			])
+			)
 		)
 		self.assertTree('-def fn(arg1="1", arg2="0"){}',
 			self._get_stmt_tree(None,
