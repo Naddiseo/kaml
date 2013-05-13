@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import unittest
 
 
-from kaml.lexer import Lexer
+from ..lexer import Lexer
 from .utils import R, S, I, T, N, K
 
 class TestLexer(unittest.TestCase):
@@ -167,3 +167,6 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens(R("Hello ${foo}"), [S('Hello '), I('foo'), S('')])
 		self.assertTokens(R("${foo} Hello "), [S(''), I('foo'), S(' Hello ')])
 		self.assertTokens(R("${foo} Hello ${foo}"), [S(''), I('foo'), S(' Hello '), I('foo'), S('')])
+
+if __name__ == '__main__':
+	unittest.main()

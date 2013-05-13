@@ -7,8 +7,8 @@ if sys.version_info[0] == 3:
 else:
 	string_types = basestring
 
-from kaml.astnodes import * #@UnusedWildImport
-from kaml.parser import Parser, ParseException
+from ..astnodes import TranslationUnit, FuncDef, FuncDecl, Suite, ReturnStmt, UseStmt
+from ..parser import Parser, ParseException
 
 class TestParser(unittest.TestCase):
 	def setUp(self):
@@ -64,4 +64,7 @@ class TestParser(unittest.TestCase):
 		self.assertParses('-def /*inline comment */ fn(){}')
 	
 	def test_use(self):
-		self.assertTree('-use foo;', [UseStmt('foo', '')])
+		self.assertTree('-use foo;', TranslationUnit(UseStmt('foo', '')))
+
+if __name__ == '__main__':
+	unittest.main()

@@ -157,7 +157,7 @@ class AcceptsList(ASTNode):
 class EmptyNode(ASTNode):
 	__slots__ = ()
 
-@to_str('{self.declarations!r}')
+@to_str('TU({self.declarations!r})')
 class TranslationUnit(AcceptsList):
 	__slots__ = ('declarations',)
 	
