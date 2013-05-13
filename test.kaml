@@ -1,7 +1,7 @@
 -use html.*
 
-$bar
-${bar.bat}
+bar
+{bar.bat}
 
 {bar}
 {bar.bat}

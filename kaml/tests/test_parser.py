@@ -7,7 +7,10 @@ if sys.version_info[0] == 3:
 else:
 	string_types = basestring
 
-from ..astnodes import TranslationUnit, FuncDef, FuncDecl, Suite, ReturnStmt, UseStmt
+from ..astnodes import (
+	TranslationUnit, FuncDef, FuncDecl, Suite, ReturnStmt, UseStmt,
+	VariableDecl, NumberLiteral, StringLiteral
+)
 from ..parser import Parser, ParseException
 
 class TestParser(unittest.TestCase):
@@ -65,6 +68,74 @@ class TestParser(unittest.TestCase):
 	
 	def test_use(self):
 		self.assertTree('-use foo;', TranslationUnit(UseStmt('foo', '')))
+		self.assertTree('-use foo.bar;', TranslationUnit(UseStmt('foo', 'bar')))
+		self.assertTree('-use foo.bar.baz;', TranslationUnit(UseStmt(UseStmt('foo', 'bar'), 'baz')))
+		self.assertTree('-use foo.*;', TranslationUnit(UseStmt('foo', '*')))
+		
+		self.assertTree('-use foo;-use bar;', TranslationUnit(UseStmt('foo', ''), UseStmt('bar', '')))
+		
+		self.assertNotParses('-use *;')
+		self.assertParses('-use -foo.-bar;')
+	
+	def test_function_def(self):
+		self.assertTree('-def fn(){}', self._get_stmt_tree(None))
+		self.assertTree('-def fn(arg1){}', self._get_stmt_tree(None, [VariableDecl('arg1', [])]))
+		self.assertTree('-def fn(arg1,){}', self._get_stmt_tree(None, [VariableDecl('arg1', [])]))
+		self.assertTree('-def fn(arg1, arg2){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', []),
+				VariableDecl('arg2', [])
+			])
+		)
+		self.assertTree('-def fn(arg1, arg2,){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', []),
+				VariableDecl('arg2', [])
+			])
+		)
+		self.assertTree('-def fn(arg1=0, arg2){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', NumberLiteral(0)),
+				VariableDecl('arg2', [])
+			])
+		)
+		self.assertTree('-def fn(arg1, arg2=0){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', []),
+				VariableDecl('arg2', NumberLiteral(0))
+			])
+		)
+		self.assertTree('-def fn(arg1=0, arg2,){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', NumberLiteral(0)),
+				VariableDecl('arg2', [])
+			])
+		)
+		self.assertTree('-def fn(arg1, arg2=0,){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', []),
+				VariableDecl('arg2', NumberLiteral(0))
+			])
+		)
+		self.assertTree('-def fn(arg1=1, arg2=0){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', NumberLiteral(1)),
+				VariableDecl('arg2', NumberLiteral(0))
+			])
+		)
+		self.assertTree('-def fn(arg1=1, arg2=0,){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', NumberLiteral(1)),
+				VariableDecl('arg2', NumberLiteral(0))
+			])
+		)
+		self.assertTree('-def fn(arg1="1", arg2="0"){}',
+			self._get_stmt_tree(None, [
+				VariableDecl('arg1', StringLiteral("1")),
+				VariableDecl('arg2', StringLiteral("0"))
+			])
+		)
+		
 
 if __name__ == '__main__':
 	unittest.main()

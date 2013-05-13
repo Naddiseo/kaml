@@ -94,7 +94,10 @@ class Parser(object):
 		                  | USE package-import '.' '*' ';'
 		'''
 		if len(p) == 4:
-			p[0] = p[2]
+			if isinstance(p[2], UseStmt):
+				p[0] = p[2]
+			else:
+				p[0] = UseStmt(p[2], '')
 		else:
 			p[0] = UseStmt(p[2], p[4])
 	
@@ -103,7 +106,7 @@ class Parser(object):
 		                   | package-import '.' ID
 		'''
 		if len(p) == 2:
-			p[0] = UseStmt(p[1], '')
+			p[0] = p[1]
 		else:
 			p[0] = UseStmt(p[1], p[3])
 		
@@ -132,10 +135,10 @@ class Parser(object):
 		'''
 		if len(p) == 1:
 			p[0] = []
-		elif len(p) == 2:
+		elif len(p) == 3:
 			p[0] = [VariableDecl(p[1], p[2])]
 		else:
-			p[0] = [p[1]] + p[3]
+			p[0] = [VariableDecl(p[1], p[2])] + p[4]
 	
 	def p_parameter_decl(self, p):
 		''' parameter-decl : ID
