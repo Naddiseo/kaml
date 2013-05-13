@@ -4,7 +4,7 @@ import itertools
 from ply import yacc
 
 from kaml.lexer import Lexer
-from kaml.astnodes import *
+from kaml.astnodes import * 
 
 class ParseException(Exception):pass
 
@@ -39,7 +39,7 @@ class Parser(object):
 		('left', '-', '+'),
 		('left', '*', '/', '%'),
 		('right', 'UMINUS'),
-		('left', '.'),
+		('left', '.', '#'),
 	)
 	
 	def _binary_op(self, p):
@@ -57,11 +57,11 @@ class Parser(object):
 		if p is not None:
 			loc = self.lexer._make_tok_location(p)
 			print('Parser Error[{}:{}]: {}'.format(loc[0], loc[1], p))
+			raise ParseException('Parser Error[{}:{}]: {}'.format(loc[0], loc[1], p))
 		else:
 			print("Parser Error, inserting ';'")
 			# Just guess, and hope that the error occurred in a statement
 			return ';'
-		raise ParseException('Parser Error: {}'.format(p))
 	
 	def p_translation_unit(self, p):
 		''' translation-unit : 
@@ -130,15 +130,46 @@ class Parser(object):
 	# parameter to always be followed by a comma.
 	def p_parameter_decl_seq(self, p):
 		''' parameter-decl-seq :
-		                       | parameter-decl optional-assign
-		                       | parameter-decl optional-assign ',' parameter-decl-seq 
+		                       | kwarg-param-decl
+		                       | hash-param-decl
+		                       | dot-param-decl
+		                       | parameter-decl-list
 		'''
-		if len(p) == 1:
-			p[0] = []
-		elif len(p) == 3:
-			p[0] = [VariableDecl(p[1], p[2])]
-		else:
-			p[0] = [VariableDecl(p[1], p[2])] + p[4]
+		
+		s = ParamSeq() if not isinstance(p[0], ParamSeq) else p[0]
+		
+		try:
+			if len(p) > 1:
+				s += p[1]
+		except ASTException as e:
+			raise ParseException(e.ast, e.msg)
+		
+		p[0] = s
+	
+	def p_parameter_decl_list(self, p):
+		''' parameter-decl-list : parameter-decl optional-assign
+		                        | parameter-decl optional-assign ',' parameter-decl-list
+		'''
+		p[0] = [VariableDecl(p[1], p[2])]
+		
+		if len(p) == 5:
+			p[0] += p[4]
+	
+	def p_kwarg_param_decl(self, p):
+		''' kwarg-param-decl : '[' parameter-decl-list ']'
+		'''
+		
+		p[0] = KWArgDecl({ v.name : v.initial for v in p[2] })
+		
+	def p_hash_param_decl(self, p):
+		''' hash-param-decl : '#' ID
+		'''
+		p[0] = HashDecl(p[2])
+	
+	def p_dot_param_decl(self, p):
+		''' dot-param-decl : '.' ID
+		'''
+		p[0] = DotDecl(p[2])
 	
 	def p_parameter_decl(self, p):
 		''' parameter-decl : ID

@@ -192,7 +192,7 @@ integers is dependent on the output language.
 	-0x01a // case insensitive, and can be negated.
 	
 	// Bad
-	0o0123; // python 3 style hex not accepted.
+	0o0123; // python 3 style hex not accepted. Treated as int "0" followed by variable "o0123"
 	0AB
 	078;    // Treated as two ints "07" and "8"
 	

@@ -6,13 +6,23 @@ __all__ = [
 	
 	'FuncDef', 'FuncDecl', 'VariableDecl', 'Suite',
 	
+	'ParamSeq', 'KWArgDecl', 'HashDecl', 'DotDecl',
+	
 	'Stmt', 'UseStmt', 'SetStmt', 'ReturnStmt', 'IfStmt', 'WhileStmt', 'ForStmt',
 	
 	'NumberLiteral', 'StringLiteral', 'BoolLiteral',
 	
-	'GetItem', 'GetAttr', 'FuncCall', 'Assign'
+	'GetItem', 'GetAttr', 'FuncCall', 'Assign',
+	
+	'ASTException',
 	
 ]
+
+class ASTException(Exception):
+	def __init__(self, ast = None, msg = '', *args, **kwargs):
+		self.ast = ast
+		self.msg = msg
+		super(ASTException, self).__init__(*args, **kwargs)
 
 class Scope(object):
 	def __init__(self):
@@ -206,11 +216,56 @@ def ForStmt(Stmt):
 @to_str('Function {self.name}({self.args})')
 class FuncDecl(ASTNode):
 	__slots__ = ('name', 'args')
-		
 
+@to_str('#{self.hash_arg}.{self.dot_args}[{self.kwargs}]({self.positional})')
+class ParamSeq(ASTNode):
+	__slots__ = ('positional', 'hash_arg', 'dot_args', 'kwargs')
+	
+	def __init__(self, *args, **kwargs):
+		super(ParamSeq, self).__init__([], None, None, {})
+	
+	def add_positional(self, arg):
+		self.positional.append(arg)
+	
+	def __iadd__(self, other):
+		if isinstance(other, VariableDecl):
+			self.positional.append(other)
+			
+		elif isinstance(other, KWArgDecl):
+			self.kwargs.update(other.kwargs)
+		
+		elif isinstance(other, HashDecl):
+			if self.has_arg is not None:
+				raise ASTException(other, 'Node already has a hash_arg')
+			self.has_arg = other
+		
+		elif isinstance(other, DotDecl):
+			if self.dot_args is None:
+				self.dot_args = []
+			
+			self.dot_args.append(other)
+		
+		else:
+			raise ASTException(other, 'Tried to add incompatible ast to ParamSeq')
+		
+		return self
+	
+	
 @to_str('Var({self.name}, {self.initial})')
 class VariableDecl(ASTNode):
 	__slots__ = ('name', 'initial')
+
+@to_str('kwarg({self.kwargs})')
+class KWArgDecl(ASTNode):
+	__slots__ = ('kwargs',)
+
+@to_str('HashDecl({self.name})')
+class HashDecl(ASTNode):
+	__slots__ = ('name',)
+
+@to_str('DotDecl({self.name})')
+class DotDecl(ASTNode):
+	__slots__ = ('name',)
 
 @to_str('Set({self.name}) = {self.value}')
 class SetStmt(Stmt):
