@@ -91,7 +91,7 @@ class Parser(object):
 	
 	def p_use_statement(self, p):
 		''' use-statement : USE package-import ';'
-		                  | USE package-import '.' '*' ';'
+		                  | USE package-import ':' '*' ';'
 		'''
 		if len(p) == 4:
 			if isinstance(p[2], UseStmt):
@@ -103,7 +103,7 @@ class Parser(object):
 	
 	def p_package_import(self, p):
 		''' package-import : ID 
-		                   | package-import '.' ID
+		                   | package-import ':' ID
 		'''
 		if len(p) == 2:
 			p[0] = p[1]
@@ -376,9 +376,9 @@ class Parser(object):
 	def p_postfix_expression(self, p):
 		'''
 		postfix-expression : primary-expression
-		                   | postfix-expression '[' expression ']'
-		                   | postfix-expression '(' expression-list-opt ')'
-		                   | postfix-expression '.' ID
+		                   | postfix-expression '[' conditional-expr-list  ']'
+		                   | postfix-expression hash-param-opt dot-param-opt kwarg-param-opt '(' expression-list-opt ')'
+		                   | postfix-expression SCOPEDID
 		                   | '(' expression ')'
 		'''
 		lp = len(p)
@@ -387,7 +387,7 @@ class Parser(object):
 			p[0] = p[1]
 		elif lp == 5:
 			ast_note_type = {
-				'[' : GetItem,
+				'{' : GetItem,
 				'(' : FuncCall
 			}[p[2]]
 			
@@ -584,3 +584,8 @@ class Parser(object):
 				p[0] = list(p[1]) + [p[3]]
 			else:
 				p[0] = [p[1], p[3]]
+	
+	def p_conditional_expr_list(self, p):
+		''' conditional-expr-list : conditional-expression
+		                          | conditional-expr-list ',' conditional-expression
+		'''

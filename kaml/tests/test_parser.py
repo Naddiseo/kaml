@@ -69,14 +69,14 @@ class TestParser(unittest.TestCase):
 	
 	def test_use(self):
 		self.assertTree('-use foo;', TranslationUnit(UseStmt('foo', '')))
-		self.assertTree('-use foo.bar;', TranslationUnit(UseStmt('foo', 'bar')))
-		self.assertTree('-use foo.bar.baz;', TranslationUnit(UseStmt(UseStmt('foo', 'bar'), 'baz')))
-		self.assertTree('-use foo.*;', TranslationUnit(UseStmt('foo', '*')))
+		self.assertTree('-use foo:bar;', TranslationUnit(UseStmt('foo', 'bar')))
+		self.assertTree('-use foo:bar:baz;', TranslationUnit(UseStmt(UseStmt('foo', 'bar'), 'baz')))
+		self.assertTree('-use foo:*;', TranslationUnit(UseStmt('foo', '*')))
 		
 		self.assertTree('-use foo;-use bar;', TranslationUnit(UseStmt('foo', ''), UseStmt('bar', '')))
 		
 		self.assertNotParses('-use *;')
-		self.assertParses('-use -foo.-bar;')
+		self.assertParses('-use -foo:-bar;')
 	
 	def test_function_def_positional(self):
 		self.assertTree('-def fn{}', self._get_stmt_tree(None))

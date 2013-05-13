@@ -75,7 +75,7 @@ class Lexer(object):
 	
 	reserved_words = reserved.values()
 	other_symbols = [
-		'ID',
+		'ID', 'SCOPEDID',
 		# Literals
 		'INT_LIT', 'FLOAT_LIT', 'STRING_LIT',
 		
@@ -84,6 +84,9 @@ class Lexer(object):
 		'ANDEQ', 'XOREQ', 'OREQ',
 		'SHL', 'SHR', 'SHLEQ', 'SHREQ',
 		'GTE', 'LTE', 'EQ', 'NE',
+		
+		# scoping
+		#'PTR',
 		
 	]
 	
@@ -116,6 +119,7 @@ class Lexer(object):
 	t_INITIAL_variablestring_ANDEQ = r'&='
 	t_INITIAL_variablestring_XOREQ = r'^='
 	t_INITIAL_variablestring_OREQ = r'\|='
+	#t_INITIAL_variablestring_PTR = r'\-\>'
 	
 	t_INITIAL_variablestring_ignore = '\t '
 	
@@ -158,6 +162,8 @@ class Lexer(object):
 	def t_INITIAL_variablestring_NL(self, t):
 		r'\s*\n+\s*'
 		t.lexer.lineno += len(t.value)
+	
+	t_INITIAL_variablestring_SCOPEDID = r':-?[a-zA-Z_][a-zA-Z_0-9\-]*'
 	
 	def t_INITIAL_variablestring_ID(self, t):
 		r'-?[a-zA-Z_][a-zA-Z_0-9\-]*'

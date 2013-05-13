@@ -1,4 +1,4 @@
--use html.*
+-use html:*
 
 bar
 {bar.bat}
@@ -45,14 +45,14 @@ div
 	
 }
 
--def div #foo (x y z) [a, b, c = 2] {
+-def div #foo [a, b, c = 2] (x, y, z)  {
 	
 }
 
-div #x (foo=1 bar=2 baz) [1, 2];
+div #x [1, 2] (foo=1, bar=2, baz) ;
 
 alert '{}, {}'.format(1, 2) {
-	html.title = "Make sure the fee is correct before creating the invoices";
+	html:title = "Make sure the fee is correct before creating the invoices";
 	body = @markdown {{{
 		Lorem Ipsum is simply dummy text of the printing and typesetting industry.
 		Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
