@@ -9,8 +9,10 @@ class Lexer(object):
 	def __init__(self, **kwargs):
 		self.log = lex.PlyLogger(sys.stderr)
 		self.lexer = lex.lex(module = self, reflags = re.U, debuglog = self.log, **kwargs)
-		self.lexer.lextokens['{'] = 1
-		self.lexer.lextokens['}'] = 1
+		self.lexer.lextokens.update({
+			'{' : 1, '}' : 1,
+			'[' : 1, ']' : 1,
+		})
 		self.nesting = 0
 		self.tok_stack = []
 	
@@ -115,7 +117,7 @@ class Lexer(object):
 	t_INITIAL_variablestring_XOREQ = r'^='
 	t_INITIAL_variablestring_OREQ = r'\|='
 	
-	t_INITIAL_variablestring_ignore = '[\t ]'
+	t_INITIAL_variablestring_ignore = '\t '
 	
 	
 	states = (

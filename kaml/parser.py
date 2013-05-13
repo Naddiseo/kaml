@@ -116,23 +116,64 @@ class Parser(object):
 		p[0] = FuncDef(p[1], p[2])
 	
 	def p_function_decl(self, p):
-		''' function-decl : DEF ID '(' parameter-decl-seq ')'
+		''' function-decl : DEF ID hash-param-opt dot-param-opt kwarg-param-opt positional-params-opt
 		'''
-		p[0] = FuncDecl(p[2], p[4])
+		seq = p[6]
+		assert type(seq) == ParamSeq
+		
+		seq += p[3]
+		seq += p[4]
+		seq += p[5]
+		
+		p[0] = FuncDecl(p[2], seq)
+	
+	def p_function_positional_params_opt(self, p):
+		''' positional-params-opt : 
+		                          | '(' parameter-decl-seq ')'
+		'''
+		
+		if len(p) > 1:
+			p[0] = p[2]
+		else:
+			p[0] = ParamSeq()
 	
 	def p_function_body(self, p):
 		''' function-body : compound-statement 
 		'''
 		p[0] = p[1]
 	
+	def p_kwarg_param_opt(self, p):
+		''' kwarg-param-opt :
+		                    | kwarg-param-decl
+		'''
+		if len(p) > 1:
+			p[0] = p[1]
+		else:
+			p[0] = []
+	
+	def p_hash_param_opt(self, p):
+		''' hash-param-opt :
+		                    | hash-param-decl
+		'''
+		if len(p) > 1:
+			p[0] = p[1]
+		else:
+			p[0] = []
+	
+	def p_dot_param_opt(self, p):
+		''' dot-param-opt :
+		                    | dot-param-decl dot-param-opt
+		'''
+		if len(p) > 1:
+			p[0] = [p[1]] + p[2]
+		else:
+			p[0] = []
+	
 	# It's not right recursion that caused this to fail,
 	# but without the second rule it would require the first
 	# parameter to always be followed by a comma.
 	def p_parameter_decl_seq(self, p):
 		''' parameter-decl-seq :
-		                       | kwarg-param-decl
-		                       | hash-param-decl
-		                       | dot-param-decl
 		                       | parameter-decl-list
 		'''
 		
@@ -160,10 +201,9 @@ class Parser(object):
 		p[0] = s
 	
 	def p_kwarg_param_decl(self, p):
-		''' kwarg-param-decl : '[' parameter-decl-list ']'
+		''' kwarg-param-decl : '[' parameter-decl-seq ']'
 		'''
-		
-		p[0] = KWArgDecl({ v.name : v.initial for v in p[2] })
+		p[0] = KWArgDecl({ v.name : v.initial for v in p[2].positional })
 		
 	def p_hash_param_decl(self, p):
 		''' hash-param-decl : '#' ID

@@ -9,7 +9,8 @@ else:
 
 from ..astnodes import (
 	TranslationUnit, FuncDef, FuncDecl, Suite, ReturnStmt, UseStmt,
-	VariableDecl, NumberLiteral, StringLiteral, ParamSeq
+	VariableDecl, NumberLiteral, StringLiteral, ParamSeq, HashDecl, DotDecl,
+	KWArgDecl,
 )
 from ..parser import Parser, ParseException
 
@@ -77,7 +78,8 @@ class TestParser(unittest.TestCase):
 		self.assertNotParses('-use *;')
 		self.assertParses('-use -foo.-bar;')
 	
-	def test_function_def(self):
+	def test_function_def_positional(self):
+		self.assertTree('-def fn{}', self._get_stmt_tree(None))
 		self.assertTree('-def fn(){}', self._get_stmt_tree(None))
 		self.assertTree('-def fn(arg1){}', self._get_stmt_tree(None, VariableDecl('arg1', [])))
 		self.assertTree('-def fn(arg1,){}', self._get_stmt_tree(None, VariableDecl('arg1', [])))
@@ -135,6 +137,140 @@ class TestParser(unittest.TestCase):
 				VariableDecl('arg2', StringLiteral("0"))
 			)
 		)
+	
+	def test_function_def_hash(self):
+		self.assertTree('-def fn#id(){}',
+			self._get_stmt_tree(None,
+				HashDecl('id')
+			)
+		)
+		self.assertNotParses('-def fn#id1#id2{}')
+	
+	def test_function_def_class(self):
+		self.assertTree('-def fn.class(){}',
+			self._get_stmt_tree(None,
+				DotDecl('class')
+			)
+		)
+		self.assertTree('-def fn.class.class2(){}',
+			self._get_stmt_tree(None,
+				DotDecl('class'),
+				DotDecl('class2')
+			)
+		)
+	
+	def test_function_def_kwargs(self):
+		self.assertTree('-def fn[](){}',
+			self._get_stmt_tree(None,
+				KWArgDecl({})
+			)
+		)
+		self.assertTree('-def fn[key](){}',
+			self._get_stmt_tree(None,
+				KWArgDecl({'key' : []})
+			)
+		)
+		self.assertTree('-def fn[key=value](){}',
+			self._get_stmt_tree(None,
+				KWArgDecl({'key' : 'value'})
+			)
+		)
+		self.assertTree('-def fn[key, key2](){}',
+			self._get_stmt_tree(None,
+				KWArgDecl({'key' : []}),
+				KWArgDecl({'key2' : []})
+			)
+		)
+		self.assertTree('-def fn[key=value, key2=value2](){}',
+			self._get_stmt_tree(None,
+				KWArgDecl({'key' : 'value'}),
+				KWArgDecl({'key2' : 'value2'})
+			)
+		)
+	
+	def test_function_def_mixed(self):
+		self.assertTree('-def fn#id[](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				KWArgDecl({}),
+			)
+		)
+		self.assertTree('-def fn#id[key](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				KWArgDecl({'key' : []}),
+			)
+		)
+		self.assertTree('-def fn#id[key=value](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				KWArgDecl({'key' : 'value'}),
+			)
+		)
+		self.assertTree('-def fn#id[key=value, key2=value2](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				KWArgDecl({'key' : 'value'}),
+				KWArgDecl({'key2' : 'value2'}),
+			)
+		)
+		
+		self.assertTree('-def fn.class[](){}',
+			self._get_stmt_tree(None,
+				DotDecl('class'),
+				KWArgDecl({}),
+			)
+		)
+		self.assertTree('-def fn.class[key](){}',
+			self._get_stmt_tree(None,
+				DotDecl('class'),
+				KWArgDecl({'key' : []}),
+			)
+		)
+		self.assertTree('-def fn.class[key=value](){}',
+			self._get_stmt_tree(None,
+				DotDecl('class'),
+				KWArgDecl({'key' : 'value'}),
+			)
+		)
+		self.assertTree('-def fn.class[key=value, key2=value2](){}',
+			self._get_stmt_tree(None,
+				DotDecl('class'),
+				KWArgDecl({'key' : 'value'}),
+				KWArgDecl({'key2' : 'value2'}),
+			)
+		)
+		
+		self.assertTree('-def fn#id.class[](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				DotDecl('class'),
+				KWArgDecl({}),
+			)
+		)
+		self.assertTree('-def fn#id.class[key](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				DotDecl('class'),
+				KWArgDecl({'key' : []}),
+			)
+		)
+		self.assertTree('-def fn#id.class[key=value](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				DotDecl('class'),
+				KWArgDecl({'key' : 'value'}),
+			)
+		)
+		self.assertTree('-def fn#id.class[key=value, key2=value2](){}',
+			self._get_stmt_tree(None,
+				HashDecl('id'),
+				DotDecl('class'),
+				KWArgDecl({'key' : 'value'}),
+				KWArgDecl({'key2' : 'value2'}),
+			)
+		)
+		
 		
 
 if __name__ == '__main__':

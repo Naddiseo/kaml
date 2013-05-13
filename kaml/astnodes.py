@@ -250,18 +250,13 @@ class ParamSeq(ASTNode):
 	__slots__ = ('positional', 'hash_arg', 'dot_args', 'kwargs')
 	
 	def __init__(self, *args, **kwargs):
-		if not args:
-			args = []
-		if not kwargs:
-			kwargs = {}
-		super(ParamSeq, self).__init__(list(args), None, None, kwargs)
-	
-	def add_positional(self, arg):
-		self.positional.append(arg)
-	
-	def __riadd__(self, lhs):
-		raise "EHHLO"
-	
+		super(ParamSeq, self).__init__([], None, None, {})
+		
+		for arg in args:
+			self +=arg
+		
+		self.kwargs.update(kwargs)
+		
 	def __iadd__(self, other):
 		if isinstance(other, VariableDecl):
 			self.positional.append(other)
@@ -311,7 +306,7 @@ class ParamSeq(ASTNode):
 			ret += '.' + '.'.join((arg for arg in self.dot_args))
 		
 		if self.kwargs:
-			ret += '[{}]'.format(', '.format('{}={!r}'.format(k, v) for k, v in self.kwargs.items()))
+			ret += '[{}]'.format(', '.join('{}={!r}'.format(k, v) for k, v in self.kwargs.items()))
 		
 		if self.positional:
 			ret += ', '.join((str(arg) for arg in self.positional))
@@ -320,7 +315,7 @@ class ParamSeq(ASTNode):
 	#__repr__ = __str__
 	
 	
-@to_str('Var({self.name}, {self.initial})')
+@to_str('VarDecl({self.name}, {self.initial})')
 class VariableDecl(ASTNode):
 	__slots__ = ('name', 'initial')
 
