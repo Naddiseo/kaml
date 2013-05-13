@@ -80,6 +80,9 @@ class ASTNode(object):
 			return deque(args[2])
 		return None
 	
+	def debug_print(self):
+		return pformat({ self.__class__.__name__ :   { k : getattr(self, k) for k in self.__slots__} }, width = 30)
+	
 	def __init__(self, *args, **kwargs):
 		self.ret_type = None
 		tokens = deque(args)
@@ -99,9 +102,22 @@ class ASTNode(object):
 
 	__repr__ = __str__
 	
+	def __ne__(self, other):
+		return not (self == other)
+	
+	def debug__eq__(self, other):
+		ret = True
+		for k in self.__slots__:
+			if getattr(self, k) != getattr(other, k):
+				print ("attr {} of {} != {}".format(k, self.debug_print(), other.debug_print()))
+				ret = False
+		return ret
+	
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__) or self.__slots__ != other.__slots__:
 			return False
+		
+		return self.debug__eq__(other)
 		
 		return all([getattr(self, k) == getattr(other, k) for k in self.__slots__])
 
@@ -157,9 +173,22 @@ class AcceptsList(ASTNode):
 		
 		return self._get_thing()[idx]
 	
+	def __ne__(self, other):
+		return not (self == other)
+	
+	def debug__eq__(self, other):
+		ret = True
+		for idx in xrange(len(self._get_thing())):
+			if self[idx] != other[idx]:
+				print("{} != {}".format(self[idx], other[idx]))
+				ret = False
+		return ret
+	
 	def __eq__(self, other):
 		if not isinstance(other, AcceptsList) or len(self._get_thing()) != len(other._get_thing()):
 			return False
+		
+		return self.debug__eq__(other)
 		
 		return all([self[idx] == other[idx] for idx in xrange(len(self._get_thing()))])
 
@@ -217,12 +246,15 @@ def ForStmt(Stmt):
 class FuncDecl(ASTNode):
 	__slots__ = ('name', 'args')
 
-@to_str('#{self.hash_arg}.{self.dot_args}[{self.kwargs}]({self.positional})')
 class ParamSeq(ASTNode):
 	__slots__ = ('positional', 'hash_arg', 'dot_args', 'kwargs')
 	
 	def __init__(self, *args, **kwargs):
-		super(ParamSeq, self).__init__([], None, None, {})
+		if not args:
+			args = []
+		if not kwargs:
+			kwargs = {}
+		super(ParamSeq, self).__init__(args, None, None, kwargs)
 	
 	def add_positional(self, arg):
 		self.positional.append(arg)
@@ -245,10 +277,30 @@ class ParamSeq(ASTNode):
 			
 			self.dot_args.append(other)
 		
+		elif isinstance(other, (list, tuple)):
+			for item in other:
+				self +=item
+		
 		else:
 			raise ASTException(other, 'Tried to add incompatible ast to ParamSeq')
 		
 		return self
+	
+	def __str__(self):
+		ret = ''
+		if self.hash_arg is not None:
+			ret += '#{}'.format(self.hash_arg)
+		if self.dot_args is not None and len(self.dot_args):
+			ret += '.' + '.'.join((arg for arg in self.dot_args))
+		
+		if self.kwargs:
+			ret += '[{}]'.format(', '.format('{}={!r}'.format(k, v) for k, v in self.kwargs.items()))
+		
+		if self.positional:
+			ret += ', '.join((str(arg) for arg in self.positional))
+		return ret
+	
+	#__repr__ = __str__
 	
 	
 @to_str('Var({self.name}, {self.initial})')
