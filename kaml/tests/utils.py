@@ -60,13 +60,13 @@ def R(s):
 
 # ------ Token Shortcuts ---------
 def S(s):
-	return ('STRING_LIT', s)
+	return ('STRING_LIT', str(s))
 
-def N(n):
-	return ('INT_LIT', n)
+def N(n, base = 10):
+	return ('INT_LIT', int(str(n), base))
 
 def F(f):
-	return ('FLOAT_LIT', f)
+	return ('FLOAT_LIT', float(f))
 
 def I(_id):
 	return ('ID', _id)

@@ -3,7 +3,7 @@ import unittest
 
 
 from ..lexer import Lexer
-from .utils import R, S, I, T, N, K
+from .utils import R, S, I, T, N, K, F
 
 class TestLexer(unittest.TestCase):
 	
@@ -52,7 +52,18 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens('-def /* comment */ fn() {}', [K('def'), I('fn'), T('('), T(')'), T('{'), T('}')])
 	
 	def test_numbers(self):
-		pass
+		self.assertTokens('0', [N(0)])
+		self.assertTokens('1', [N(1)])
+		self.assertTokens('10', [N(10)])
+		self.assertTokens('-1', [N(-1)])
+		self.assertTokens('-0', [N(-0)])
+		self.assertTokens('-10', [N(-10)])
+		self.assertTokens('0123', [N('123', 8)])
+		self.assertTokens('-0123', [N('-123', 8)])
+		self.assertTokens('0xa', [N(0xa)])
+		self.assertTokens('078', [N(07), N(8)])
+		self.assertTokens('0xag', [N(0xa), I('g')])
+		self.assertTokens('0.0', [F(0)])
 	
 	def test_stringsg(self):
 		tokens = [S('ABCD')]
@@ -170,3 +181,4 @@ class TestLexer(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+

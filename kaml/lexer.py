@@ -158,19 +158,33 @@ class Lexer(object):
 		t.lexer.lineno += len(t.value)
 	
 	def t_INITIAL_variablestring_ID(self, t):
-		r'[a-zA-Z_\-][a-zA-Z_0-9\-]*'
+		r'-?[a-zA-Z_][a-zA-Z_0-9\-]*'
 		if t.value in self.reserved:
 			t.type = self.reserved[t.value]
-		return t
-	
-	def t_INITIAL_variablestring_INT_LIT(self, t):
-		r'0|[1-9][0-9]*'
-		t.value = int(t.value)
 		return t
 	
 	def t_INITIAL_variablestring_FLOAT_LIT(self, t):
 		r'[0-9]+\.[0-9]+'
 		t.value = float(t.value)
+		return t
+	
+	# Must come after FLOAT_LIT
+	def t_INITIAL_variablestring_OCT_LIT(self, t):
+		r'-?0[1-7]+'
+		t.value = int(t.value, 8)
+		t.type = 'INT_LIT'
+		return t
+	
+	def t_INITIAL_variablestring_HEX_LIT(self, t):
+		r'0x[0-9a-fA-F]+'
+		t.value = int(t.value, 16)
+		t.type = 'INT_LIT'
+		return t
+	
+	# This must come after the OCT_LIT and HEX_LIT
+	def t_INITIAL_variablestring_INT_LIT(self, t):
+		r'-?(0|[1-9][0-9]*)'
+		t.value = int(t.value)
 		return t
 	
 	def t_INITIAL_variablestring_STRING_BEGIN(self, t):
