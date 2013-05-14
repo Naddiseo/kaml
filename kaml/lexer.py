@@ -2,11 +2,70 @@ from __future__ import unicode_literals
 import re, sys
 
 from ply import lex
-# Influence from pycparser, and aptana's CSS.bnf
+from ply.lex import LexToken
+
+class T(LexToken):
+	__slots__ = ('type', 'value', 'lineno', 'lexpos')
+	def __init__(self, t, v = None):
+		if isinstance(t, (tuple, list)):
+			l = len(t)
+			self.type = t[0] if l else t
+			self.value = t[1] if l > 1 else v
+			self.lineno = t[2] if l > 2 else 0
+			self.lexpos = t[3] if l > 3 else 0
+		elif isinstance(t, LexToken):
+			self.lineno = t.lineno
+			self.lexpos = t.lexpos
+			self.type = t.type
+			self.value = t.value
+		else:
+			self.lineno = 0
+			self.lexpos = 0
+			self.type = t
+			self.value = v
+	
+	def __eq__(self, other):
+		other_t = None
+		other_v = None
+		
+		if isinstance(other, (tuple, list)):
+			if len(other) == 2:
+				other_t, other_v = other
+			elif len(other) == 1:
+				other_t = other[0]
+			else:
+				return False
+		
+		elif isinstance(other, (T, LexToken)):
+			other_t = other.type
+			other_v = other.value
+		
+		else:
+			return False
+		
+		ret = other_t == self.type
+		
+		if all([other_v is not None, self.value is not None]):
+			fn = {
+				'INT_LIT' : int,
+				'FLOAT_LIT' : float,
+			}
+			
+			self.value = fn.get(self.type, unicode)(self.value)
+			other_v = fn.get(self.type, unicode)(other_v)
+			
+			ret = ret and other_v == self.value
+		
+		return ret
+	
+	def __repr__(self):
+		return "Token({}, {!r})".format(self.type, self.value)
 
 class Lexer(object):
 	
 	def __init__(self, **kwargs):
+		data = kwargs.pop('data', None)
+		
 		self.log = lex.PlyLogger(sys.stderr)
 		self.lexer = lex.lex(module = self, reflags = re.U, debuglog = self.log, **kwargs)
 		self.lexer.lextokens.update({
@@ -15,14 +74,20 @@ class Lexer(object):
 		})
 		self.nesting = 0
 		self.tok_stack = []
+		
+		if data is not None:
+			self.lexer.input(data)
 	
 	def _get_token(self):
 		if len(self.tok_stack):
 			return self.tok_stack.pop(0)
-		return self.lexer.token()
+		return T(self.lexer.token())
 	
 	def _push_token(self, t):
 		self.tok_stack.append(t)
+	
+	def set_data(self, data):
+		self.lexer.input(unicode(data))
 	
 	def tokenize(self, data):
 		self.lexer.input(unicode(data))
@@ -45,6 +110,20 @@ class Lexer(object):
 				yield tok
 			else:
 				break
+	
+	def la(self, n):
+		''' Look ahead n tokens '''
+		
+		if len(self.tok_stack) < n:
+			for _ in xrange(n - len(self.tok_stack)):
+				self._push_token(T(self.lexer.token()))
+		
+		return self.tok_stack[n - 1]
+	
+	def skip(self, n):
+		''' Skip the next n tokens '''
+		for _ in xrange(n):
+			self._get_token()
 	
 	def find_tok_column(self, token):
 		last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)

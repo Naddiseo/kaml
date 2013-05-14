@@ -2,7 +2,7 @@ import argparse
 from pprint import pprint
 import sys
 
-from kaml.parser import Parser
+from kaml.recdec import Parser
 from kaml.lexer import Lexer
 
 parser = argparse.ArgumentParser()
