@@ -377,7 +377,7 @@ class Assign(BinaryOp): pass
 @to_str('Rel({self.lhs} {self.op} {self.rhs})')
 class RelationOp(BinaryOp): pass
 
-@to_str('{self.base_expr}[{self.substcript}]')
+@to_str('{self.base_expr}[{self.subscript}]')
 class GetItem(Expr):
 	__slots__ = ('base_expr', 'subscript')
 	
