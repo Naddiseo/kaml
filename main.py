@@ -17,7 +17,7 @@ if __name__ == '__main__':
 		
 		with open(args.input_file) as fp:
 			if args.lexeronly:
-				l = Lexer(trace = args.trace)
+				l = Lexer()
 				for t in l.tokenize(unicode(fp.read())):
 					print t
 			else:

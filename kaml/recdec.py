@@ -4,6 +4,7 @@ from kaml.lexer import Lexer
 from kaml.astnodes import * #@UnusedWildImport
 
 class ParseError(Exception): pass
+class KAMLSyntaxError(ParseError): pass
 
 class Parser(object):
 	
@@ -21,7 +22,6 @@ class Parser(object):
 	def expect(self, tok_type, tok_value = None):
 		tok = self.t()
 		return self.shouldbe(tok, tok_type, tok_value)
-		
 	
 	def shouldbe(self, tok, tok_type, tok_value = None):
 		if tok.type == tok_type:
@@ -64,24 +64,38 @@ class Parser(object):
 	
 	def use_stmt(self):
 		self.expect('USE')
-		ret = self.expect('ID')
-		
-		while self.la(1).type == ':':
-			self.skip(1)
+		return UseStmt(self.expect('ID'), self.package_import())
+	
+	def package_import(self):
+		la = self.la(1)
+		if la.type in ('SCOPEDID', ':'):
 			child = self.t()
-			if child.type == '*':
-				ret = UseStmt(ret, child)
-				break
-			elif child.type == ';':
-				break
+			if child.type == ':':
+				return self.expect('*')
 			else:
-				self.shouldbe(child, 'ID')
-				ret = UseStmt(ret, child)
+				return UseStmt(self.shouldbe(child, 'SCOPEDID'), self.package_import())
 		
-		return ret
+		elif la.type == ';':
+			self.expect(';')
+			return None
+		
+		raise KAMLSyntaxError(la)
 	
 	def func_defn(self):
-		return None
+		return FuncDef(
+			self.function_decl(),
+			self.function_body()
+		)
+	
+	def function_decl(self):
+		self.expect('DEF')
+		
+		fn_name = self.expect('ID')
+		
+		return FuncDecl(fn_name, None)
+	
+	def function_body(self):
+		pass
 	
 	def stmt(self):
 		return None
