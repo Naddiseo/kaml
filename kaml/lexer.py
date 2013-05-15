@@ -164,8 +164,8 @@ class Lexer(object):
 		'SHL', 'SHR', 'SHLEQ', 'SHREQ',
 		'GTE', 'LTE', 'EQ', 'NE',
 		
-		# scoping
-		#'PTR',
+		# WS
+		'WS',
 		
 	]
 	
@@ -200,7 +200,7 @@ class Lexer(object):
 	t_INITIAL_variablestring_OREQ = r'\|='
 	#t_INITIAL_variablestring_PTR = r'\-\>'
 	
-	t_INITIAL_variablestring_ignore = '\t '
+	t_INITIAL_variablestring_WS = '[\t ]+'
 	
 	
 	states = (
@@ -241,8 +241,8 @@ class Lexer(object):
 	def t_INITIAL_variablestring_NL(self, t):
 		r'\s*\n+\s*'
 		t.lexer.lineno += len(t.value)
-	
-	t_INITIAL_variablestring_SCOPEDID = r':-?[a-zA-Z_][a-zA-Z_0-9\-]*'
+		t.type = 'WS'
+		return t
 	
 	def t_INITIAL_variablestring_ID(self, t):
 		r'-?[a-zA-Z_][a-zA-Z_0-9\-]*'

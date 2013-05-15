@@ -10,17 +10,19 @@ class Parser(object):
 	
 	def __init__(self, *args, **kwargs):
 		self.lexer = Lexer()
-		self.token_stack = []
 		self.la = self.lexer.la
 		self.skip = self.lexer.skip
 		
-	def t(self):
-		if len(self.token_stack):
-			return self.token_stack.pop()
-		return self.lexer._get_token()
+	def t(self, filter_ws = True):
+		t = self.lexer._get_token()
+		if filter_ws:
+			while t.type == 'WS':
+				t = self.lexer._get_token()
+		
+		return t 
 	
-	def expect(self, tok_type, tok_value = None):
-		tok = self.t()
+	def expect(self, tok_type, tok_value = None, filter_ws = True):
+		tok = self.t(filter_ws)
 		return self.shouldbe(tok, tok_type, tok_value)
 	
 	def shouldbe(self, tok, tok_type, tok_value = None):
@@ -68,12 +70,12 @@ class Parser(object):
 	
 	def package_import(self):
 		la = self.la(1)
-		if la.type in ('SCOPEDID', ':'):
+		if la.type in ('ID', ':'):
 			child = self.t()
 			if child.type == ':':
 				return self.expect('*')
 			else:
-				return UseStmt(self.shouldbe(child, 'SCOPEDID'), self.package_import())
+				return UseStmt(self.shouldbe(child, 'ID'), self.package_import())
 		
 		elif la.type == ';':
 			self.expect(';')
