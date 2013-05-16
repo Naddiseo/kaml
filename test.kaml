@@ -19,7 +19,7 @@ bar
 }
 
 -def alert *args {
-	div(class = ['alert', type]) {
+	div(class = ('alert', type)) {
 		img "images/${type}.jpg";
 		h4 title;
 		text body;

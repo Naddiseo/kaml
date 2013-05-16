@@ -1,0 +1,8 @@
+
+// Special functions
+
+-def "#" (id):
+	return [id = id]
+
+-def "." (class):
+	return [class = class]

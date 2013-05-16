@@ -1,6 +1,6 @@
 import argparse
 from pprint import pprint
-import sys
+import sys, os
 
 from kaml.recdec import Parser
 from kaml.lexer import Lexer
@@ -21,7 +21,9 @@ if __name__ == '__main__':
 				for t in l.tokenize(unicode(fp.read())):
 					print t
 			else:
-				p = Parser(debug = True, write_tables = 0)
+				base_path = os.path.abspath(os.path.dirname(__file__))
+				lib_path = os.path.join(base_path, 'kaml', 'lib')
+				p = Parser(debug = True, write_tables = 0, search_paths = [lib_path])
 				
 				ast = p.parse(fp.read(), debug = args.trace)
 				

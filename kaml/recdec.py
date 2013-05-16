@@ -1,7 +1,8 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division, absolute_import, print_function
 
 from kaml.lexer import Lexer
 from kaml.astnodes import * #@UnusedWildImport
+from kaml.package_import import PackageImporter
 
 class ParseError(Exception): pass
 class KAMLSyntaxError(ParseError): pass
@@ -12,6 +13,15 @@ class Parser(object):
 		self.lexer = Lexer()
 		self.la = self.lexer.la
 		self.skip = self.lexer.skip
+		
+		self.scope = Scope()
+		self.importer = PackageImporter(
+			kwargs.get('search_paths', ['.']),
+			parser_kwargs = dict(
+				debug = kwargs.get('debug', False)
+			),
+			memo = kwargs.get('importer_memo', set())
+		)
 		
 	def t(self, filter_ws = True):
 		t = self.lexer._get_token()
@@ -28,7 +38,10 @@ class Parser(object):
 	def shouldbe(self, tok, tok_type, tok_value = None):
 		if tok.type == tok_type:
 			if tok_value is None or (tok_value is not None and tok.value == tok_value):
-				return tok
+				if tok.value is None:
+					return tok
+				else:
+					return tok.value
 		
 		raise ParseError("Expecting Tok<{}>({}) but got {}".format(tok_type, tok_value, tok))
 	
@@ -48,7 +61,6 @@ class Parser(object):
 				break
 			items.append(top_level_block_item)
 		
-		
 		if len(items):
 			return TranslationUnit(*items)
 		
@@ -66,7 +78,11 @@ class Parser(object):
 	
 	def use_stmt(self):
 		self.expect('USE')
-		return UseStmt(self.expect('ID'), self.package_import())
+		use = UseStmt(self.expect('ID'), self.package_import())
+		
+		ast = self.importer.import_package(use.get_dotted_string())
+		# TODO: resolve names from the import
+		return ast
 	
 	def package_import(self):
 		la = self.la(1)
@@ -84,17 +100,33 @@ class Parser(object):
 		raise KAMLSyntaxError(la)
 	
 	def func_defn(self):
-		return FuncDef(
-			self.function_decl(),
-			self.function_body()
-		)
+		
+		decl = self.function_decl()
+		
+		self.scope.push()
+		body = self.function_body()
+		self.scope.pop
+		
+		return FuncDef(decl, body)
 	
 	def function_decl(self):
 		self.expect('DEF')
 		
-		fn_name = self.expect('ID')
+		la = self.la(1)
+		params = ParamSeq()
 		
-		return FuncDecl(fn_name, None)
+		if la.type == 'ID':
+			fn_name = self.expect('ID')
+		
+		elif la.type == 'STRING_LIT':
+			# Compile time functions
+			fn_name = self.t().value
+			
+		
+		decl = FuncDecl(fn_name, params)
+		self.scope[fn_name] = decl
+		
+		return decl
 	
 	def function_body(self):
 		pass

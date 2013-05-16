@@ -94,7 +94,7 @@ class Lexer(object):
 		while True:
 			tok = self._get_token()
 				
-			if tok:
+			if tok and tok.type is not None:
 				if tok.type == 'STRING_LIT':
 					t = lex.LexToken()
 					t.lineno = tok.lineno
