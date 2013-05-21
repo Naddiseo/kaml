@@ -3,15 +3,12 @@ import unittest
 
 
 from ..lexer import Lexer
-from .utils import R, S, I, T, N, K, F
+from .utils import R, S, I, T, N, K, F, L
 
 class TestLexer(unittest.TestCase):
 	
-	def setUp(self):
-		self.l = Lexer()
-	
 	def assertTokens(self, code, tokens = [], msg = None):
-		lexer_tokens = [T(t.type, t.value) for t in list(self.l.tokenize(code)) if t]
+		lexer_tokens = [T(t.type, t.value) for t in Lexer(data = code) if t]
 		test_tokens = [T(*t) if isinstance(t, (list, tuple)) else t for t in tokens if t]
 		try:
 			self.assertTokenLists(test_tokens, lexer_tokens, msg)
@@ -20,7 +17,6 @@ class TestLexer(unittest.TestCase):
 			raise
 	
 	def assertTokenLists(self, expected_tokens, actual_tokens, msg = None):
-		self.l = Lexer() # Recreate in case a previous test leaves the lexer in a bad state
 		try:
 			self.assertEqual(len(expected_tokens), len(actual_tokens))
 		except AssertionError:
@@ -29,6 +25,16 @@ class TestLexer(unittest.TestCase):
 		
 		for expected, actual in zip(expected_tokens, actual_tokens):
 			self.assertEqual(expected, actual, msg)
+	
+	def test_la(self):
+		code = '-def "#" id {}'
+		tokens = [K('def'), S('#'), I('id'), L('{'), L('}')]
+		self.assertTokens(code, tokens)
+		l = Lexer(data = code)
+		
+		for i, t in enumerate(tokens):
+			print ("{}:{} -> {}".format(i, t, l.tok_stack))
+			self.assertEquals(T(*t), l.la(i))
 	
 	def test_kw_tokens(self):
 		code = "-def -set -for -if -elif -else -use -while -continue -break or and true false"
@@ -45,6 +51,9 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens('0-ident', [N('0'), I('-ident')])
 		self.assertTokens('ident-0-ent', [I('ident-0-ent')])
 	
+	def test_empty(self):
+		self.assertTokens('\n    \t', [])
+	
 	def test_comments(self):
 		self.assertTokens("// This is a comment", [])
 		self.assertTokens('//this is a comment\n//this is on the next line', [])
@@ -55,11 +64,11 @@ class TestLexer(unittest.TestCase):
 		self.assertTokens('0', [N(0)])
 		self.assertTokens('1', [N(1)])
 		self.assertTokens('10', [N(10)])
-		self.assertTokens('-1', [N(-1)])
-		self.assertTokens('-0', [N(-0)])
-		self.assertTokens('-10', [N(-10)])
+		self.assertTokens('-1', [L('-'), N(1)])
+		self.assertTokens('-0', [L('-'), N(0)])
+		self.assertTokens('-10', [L('-'), N(10)])
 		self.assertTokens('0123', [N('123', 8)])
-		self.assertTokens('-0123', [N('-123', 8)])
+		self.assertTokens('-0123', [L('-'), N('123', 8)])
 		self.assertTokens('0xa', [N(0xa)])
 		self.assertTokens('078', [N(07), N(8)])
 		self.assertTokens('0xag', [N(0xa), I('g')])

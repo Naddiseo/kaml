@@ -18,11 +18,11 @@ __all__ = [
 	
 	'ParamSeq', 'KWArgDecl',
 	
-	'Stmt', 'UseStmt', 'SetStmt', 'ReturnStmt', 'IfStmt', 'WhileStmt', 'ForStmt',
+	'Stmt', 'UseStmt', 'SetStmt', 'ReturnStmt', 'ContinueStmt', 'IfStmt', 'WhileStmt', 'ForStmt',
 	
 	'NumberLiteral', 'StringLiteral', 'BoolLiteral',
 	
-	'GetItem', 'GetAttr', 'FuncCall', 'Assignment',
+	'GetItem', 'GetAttr', 'FuncCall', 'Assignment', 'TestOp',
 	
 	'ASTException',
 	
@@ -87,6 +87,9 @@ class Scope(object):
 	
 	def __exit__(self, exc_type, exc_value, traceback):
 		self.pop()
+	
+	def __repr__(self):
+		return self.names
 
 class ASTNode(object):
 	scope = Scope()
@@ -236,8 +239,15 @@ class Suite(AcceptsList):
 class FuncDef(ASTNode):
 	__slots__ = ('decl', 'suite')
 	
+	@property
+	def is_compile_time(self):
+		return self.decl.is_compile_time
+	
 	def eval(self, eval_context):
 		self.decl.eval(eval_context)
+	
+	def call(self, eval_context):
+		return self.suite.eval(eval_context)
 
 @to_str('{self.stmt!r}')
 class Stmt(ASTNode): 
@@ -260,6 +270,9 @@ class UseStmt(Stmt):
 		
 		elif isinstance(self.child, StringTypes):
 			child = ':{}'.format(self.child)
+		
+		elif self.child is None:
+			return ':{}'.format(self.root)
 		
 		return '{}{}'.format(self.root, child)
 
@@ -318,6 +331,10 @@ class ForStmt(Stmt):
 class FuncDecl(ASTNode):
 	__slots__ = ('name', 'args')
 	
+	def __init__(self, *args, **kwargs):
+		self.is_compile_time = kwargs.pop('is_compile_time', False)
+		super(FuncDecl, self).__init__(*args, **kwargs)
+	
 	def eval(self, eval_context):
 		self.args.eval(eval_context)
 
@@ -332,11 +349,16 @@ class ParamSeq(ASTNode):
 		
 		self.kwargs.update(kwargs)
 	
+	def eval(self, eval_context):
+		for arg in self.positional:
+			assert isinstance(arg, VariableDecl)
+			arg.eval(eval_context)
+	
 	def get_arg_count(self):
 		if self.has_args:
 			return -1
 		else:
-			return len(self.positional) + len(self.kwargs.keys())
+			return len(self.positional)
 		
 	def __iadd__(self, other):
 		if isinstance(other, VariableDecl):
@@ -377,8 +399,14 @@ class VariableDecl(ASTNode):
 	__slots__ = ('name', 'initial')
 	
 	def eval(self, eval_context):
-		name = self.name.eval(eval_context)
-		initial = self.initial.eval(eval_context)
+		if isinstance(self.name, ASTNode):
+			name = self.name.eval(eval_context)
+		else:
+			name = self.name
+		if isinstance(self.initial, ASTNode):
+			initial = self.initial.eval(eval_context)
+		else:
+			initial = self.initial
 		eval_context[name] = initial
 
 @to_str('kwarg({self.kwargs})')
@@ -400,6 +428,13 @@ class ReturnStmt(Stmt):
 	
 	def eval(self, eval_context):
 		raise EvalReturn(self.expr.eval(eval_context))
+
+@to_str('Continue;')
+class ContinueStmt(Stmt):
+	__slots__ = ()
+	
+	def eval(self, eval_context):
+		raise EvalContinue()
 
 @to_str('Ident({self.name})')
 class Identifier(ASTNode):
@@ -450,7 +485,7 @@ class UnaryOp(Expr):
 		
 		return op(self.expr.eval(eval_context))
 
-@to_str('Op({self.op})({self.lhs}, {self.rhs})')
+@to_str('({self.lhs} {self.op} {self.rhs})')
 class BinaryOp(Expr):
 	__slots__ = ('lhs', 'op', 'rhs')
 	
@@ -541,13 +576,20 @@ class FuncCall(Expr):
 		
 		fn = eval_context[self.fn_name]
 		
+		if not fn.is_compiletime:
+			return None
+		
 		suite = fn.suite
 		
-		with eval_context:
-			for p in self.params:
-				param = p.eval(eval_context)
-				eval_context[param.name] = param
-			suite.eval(eval_context)
+		try:
+			with eval_context:
+				for p in self.params:
+					param = p.eval(eval_context)
+					eval_context[param.name] = param
+				suite.eval(eval_context)
+		except EvalReturn as ret:
+			return ret.value
+		return None
 
 class Trailer(Expr):
 	__expr__ = ('expr', 'trailer')

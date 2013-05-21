@@ -17,8 +17,7 @@ if __name__ == '__main__':
 		
 		with open(args.input_file) as fp:
 			if args.lexeronly:
-				l = Lexer()
-				for t in l.tokenize(unicode(fp.read())):
+				for t in Lexer(data = unicode(fp.read())):
 					print t
 			else:
 				base_path = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +28,6 @@ if __name__ == '__main__':
 				
 				if ast in (None, []):
 					ast = '<empty tree>'
-				
+				print ast.eval(ast.scope)
 				pprint(ast)
 				print('')

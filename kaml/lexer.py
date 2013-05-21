@@ -61,6 +61,8 @@ class T(LexToken):
 	def __repr__(self):
 		return "Token({}, {!r})".format(self.type, self.value)
 
+class LexerError(Exception): pass
+
 class Lexer(object):
 	
 	def __init__(self, **kwargs):
@@ -78,47 +80,108 @@ class Lexer(object):
 		if data is not None:
 			self.lexer.input(data)
 	
-	def _get_token(self):
+	def __get_token(self):
+		''' Returns a raw token from either the stack, or a new token'''
 		if len(self.tok_stack):
 			return self.tok_stack.pop(0)
+		
 		return T(self.lexer.token())
+	
+	def __join_str(self):
+		''' Concatenates adjacent string literals '''
+		tok = self.__get_token()
+		if tok and tok.type is not None:
+			if tok.type == 'STRING_LIT':
+				stack = [tok]
+				
+				# Add all WS and STRING_LIT tokens to a stack
+				while True:
+					t = self.__get_token()
+					stack.append(t)
+					if t.type not in ('WS', 'STRING_LIT'):
+						break
+				
+				# Now join all STRING_LIT WS* STRING_LIT sequences
+				
+				## How many STRING_LIT tokens in the stack?
+				sl = len(filter(lambda t: t.type == 'STRING_LIT', stack))
+				
+				if sl > 1:
+					### Join the sequences
+					#### Find the right most STRING_LIT
+					r_index = next((i for i, x in enumerate(reversed(stack)) if x.type == 'STRING_LIT'), None)
+					if r_index is None:
+						raise LexerError("Could not find right STRING_LIT", stack)
+					
+					#### Since the list was reversed, undo.
+					r_index = len(stack) - r_index
+					i = r_index
+					
+					#### Join all tokens between 1 and r_index
+					t = T(stack[0])
+					t.value = ''.join((t.value for t in stack[:r_index] if t.type == 'STRING_LIT'))
+					
+				else:
+					### Only the first one
+					t = stack[0]
+					i = 1
+					
+				# Now copy any extra tokens to tok_stack
+				for tok in stack[i:]:
+					self._push_token(tok)
+				
+				return t
+		
+		return tok
+	
+	def token(self, filter_ws = True):
+		''' Public interface for getting a token, optionally strips WS'''
+		t = self.__join_str()
+		if filter_ws:
+			while t.type == 'WS':
+				t = self.__join_str()
+		return t
+	
 	
 	def _push_token(self, t):
 		self.tok_stack.append(t)
 	
+	untoken = _push_token
+		
 	def set_data(self, data):
 		self.lexer.input(unicode(data))
 	
-	def tokenize(self, data):
-		self.lexer.input(unicode(data))
+	def __iter__(self):
 		while True:
-			tok = self._get_token()
-				
-			if tok and tok.type is not None:
-				if tok.type == 'STRING_LIT':
-					t = lex.LexToken()
-					t.lineno = tok.lineno
-					t.type = 'STRING_LIT'
-					t.lexpos = tok.lexpos
-					t.value = ''
-					
-					while tok and tok.type == 'STRING_LIT':
-						t.value += tok.value
-						tok = self._get_token()
-					
-					yield t
-				yield tok
-			else:
-				break
+			t = self.token()
+			if not t or t.type is None:
+				raise StopIteration
+			yield t
 	
-	def la(self, n):
-		''' Look ahead n tokens '''
+	def la(self, n = 1, filter_ws = True):
+		''' Look ahead n tokens 
+			Makes sure there are at least N tokens on the stack
+		'''
+			
+		if filter_ws:
+			get_stack = lambda: filter(lambda t: t.type != 'WS', self.tok_stack)
+		else:
+			get_stack = lambda:self.tok_stack
 		
-		if len(self.tok_stack) < n:
-			for _ in xrange(n - len(self.tok_stack)):
-				self._push_token(T(self.lexer.token()))
-		
-		return self.tok_stack[n - 1]
+		i = j = len(get_stack())
+		while i < n:
+			t = self.token()
+			if t.type is None:
+				return None
+			self.tok_stack.insert(j, t)
+			j = len(self.tok_stack)
+			
+			if filter_ws and t.type == 'WS':
+				continue
+			
+			i += 1
+			
+		return get_stack()[n - 1]
 	
 	def skip(self, n):
 		''' Skip the next n tokens '''
@@ -134,8 +197,8 @@ class Lexer(object):
 	
 	def push(self, s):
 		t = '-' * len(self.lexer.lexstatestack) #@UnusedVariable
-		if self.lexer.trace:
-			self.log.debug("{}Starting {}".format(t, s))
+#		if self.lexer.trace:
+#			self.log.debug("{}Starting {}".format(t, s))
 		self.lexer.push_state(s)
 	
 	def pop(self):
@@ -143,9 +206,9 @@ class Lexer(object):
 		current = self.lexer.current_state() #@UnusedVariable
 		self.lexer.pop_state()
 		following = self.lexer.current_state() #@UnusedVariable
-		if self.lexer.trace:
-			self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
-		
+#		if self.lexer.trace:
+#			self.log.debug("{}Ending {}. Continuing {}".format(t, current, following))
+#		
 	
 	reserved = {k.strip() : k.strip().replace('-', '').upper() for k in """
 	-def -set -for -if -elif -else -use -while -continue -break -return
@@ -257,7 +320,7 @@ class Lexer(object):
 	
 	# Must come after FLOAT_LIT
 	def t_INITIAL_variablestring_OCT_LIT(self, t):
-		r'-?0[1-7]+'
+		r'0[1-7]+'
 		t.value = int(t.value, 8)
 		t.type = 'INT_LIT'
 		return t
@@ -270,7 +333,7 @@ class Lexer(object):
 	
 	# This must come after the OCT_LIT and HEX_LIT
 	def t_INITIAL_variablestring_INT_LIT(self, t):
-		r'-?(0|[1-9][0-9]*)'
+		r'(0|[1-9][0-9]*)'
 		t.value = int(t.value)
 		return t
 	

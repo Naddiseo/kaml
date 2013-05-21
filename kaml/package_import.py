@@ -22,7 +22,7 @@ class PackageImporter(object):
 		
 		if parts[-1] == '*':
 			parts = parts[:-1]
-		
+		#print ("<name={}>Parts={}".format(name, parts))
 		parts[-1] += '.kaml'
 		
 		for path in self.search_paths:
@@ -42,4 +42,4 @@ class PackageImporter(object):
 			except IOError:
 				pass
 		
-		raise KAMLImportError("Could not find `{}`".format(name))
+		raise KAMLImportError("Could not find `{}` in search paths {}".format(name, self.search_paths))

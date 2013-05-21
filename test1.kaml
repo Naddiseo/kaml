@@ -1,3 +1,7 @@
--use html;
+-use html:element;
 
-a <<= b;
+-def "#" id {
+	-set foo = 1 * 2 + 3 | 4;
+	-return foo;
+}
+-def foo a,b {}
