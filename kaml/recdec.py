@@ -77,7 +77,7 @@ class Parser(object):
 	def use_stmt(self):
 		self.expect('USE')
 		use = UseStmt(self.expect('ID'), self.package_import())
-		
+		self.expect(';')
 		ast = self.importer.import_package(use.get_dotted_string())
 		# TODO: resolve names from the import
 		return ast
@@ -91,12 +91,7 @@ class Parser(object):
 				return self.expect('*')
 			else:
 				return UseStmt(self.shouldbe(child, 'ID'), self.package_import())
-		
-		elif la.type == ';':
-			self.expect(';')
-			return None
-		
-		raise KAMLSyntaxError(la)
+		return None
 	
 	def func_defn(self):
 		
@@ -265,8 +260,16 @@ class Parser(object):
 		            | string-literal
 		            | boolean-literal
 		'''
-		if self.la(1).type in ('INT_LIT', 'FLOAT_LIT', 'STRING_LIT', 'TRUE', 'FALSE'):
-			return self.t()
+		tp = self.la().type
+		l = {
+			'INT_LIT' : NumberLiteral,
+			'FLOAT_LIT' : NumberLiteral,
+			'STRING_LIT' : StringLiteral,
+			'TRUE' : BoolLiteral,
+			'FALSE' : BoolLiteral
+		}
+		if tp in l:
+			return l[tp](self.t().value)
 		return None
 	
 	def primary_expression(self):

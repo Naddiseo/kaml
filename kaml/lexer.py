@@ -61,6 +61,30 @@ class T(LexToken):
 	def __repr__(self):
 		return "Token({}, {!r})".format(self.type, self.value)
 
+class TokenStack(list):
+	''
+	
+	def length(self, filter_ws = True):
+		if not filter_ws:
+			return len(self)
+		
+		return len(filter(lambda t: t.type != 'WS', self))
+	
+	def insert(self, pos, thing, filter_ws = True):
+		if not filter_ws:
+			return super(TokenStack, self).insert(pos, thing)
+		real_pos = 0
+		
+		for tok in self:
+			real_pos += 1
+			if tok.type == 'WS':
+				continue
+			if pos == 0:
+				break
+			pos -= 1
+		
+		return super(TokenStack, self).insert(real_pos, thing)
+
 class LexerError(Exception): pass
 
 class Lexer(object):
@@ -75,16 +99,13 @@ class Lexer(object):
 			'[' : 1, ']' : 1,
 		})
 		self.nesting = 0
-		self.tok_stack = []
+		self.tok_stack = TokenStack()
 		
 		if data is not None:
 			self.lexer.input(data)
 	
 	def __get_token(self):
-		''' Returns a raw token from either the stack, or a new token'''
-		if len(self.tok_stack):
-			return self.tok_stack.pop(0)
-		
+		''' Returns a raw new token'''
 		return T(self.lexer.token())
 	
 	def __join_str(self):
@@ -134,13 +155,22 @@ class Lexer(object):
 		
 		return tok
 	
-	def token(self, filter_ws = True):
-		''' Public interface for getting a token, optionally strips WS'''
+	def _token(self, filter_ws = True):
 		t = self.__join_str()
 		if filter_ws:
 			while t.type == 'WS':
 				t = self.__join_str()
 		return t
+	
+	def token(self, filter_ws = True):
+		''' Public interface for getting a token, optionally strips WS'''
+		while len(self.tok_stack):
+			t = self.tok_stack.pop(0)
+			if filter_ws and t.type == 'WS':
+				continue
+			return t
+		
+		return self._token(filter_ws)
 	
 	
 	def _push_token(self, t):
@@ -166,28 +196,23 @@ class Lexer(object):
 		if n < 1:
 			n = 1
 			
-		stack = self.tok_stack[:]
-		self.tok_stack = []
-		
 		if filter_ws:
-			get_stack = lambda: filter(lambda t: t.type != 'WS', stack)
+			get_stack = lambda: filter(lambda t: t.type != 'WS', self.tok_stack)
 		else:
-			get_stack = lambda:stack
+			get_stack = lambda:self.tok_stack
 		
-		i = j = len(get_stack())
+		i = j = self.tok_stack.length(filter_ws)
 		while i < n:
-			t = self.token()
+			t = self._token()
 			if t.type is None:
 				return None
-			stack.insert(j, t)
-			j = len(stack)
+			self.tok_stack.insert(j, t, False)
+			j = self.tok_stack.length(filter_ws)
 			
 			if filter_ws and t.type == 'WS':
 				continue
 			
 			i += 1
-		
-		self.tok_stack = stack
 		
 		return get_stack()[n - 1]
 	

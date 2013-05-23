@@ -266,7 +266,7 @@ class UseStmt(Stmt):
 			child = ':*'
 		
 		elif isinstance(self.child, UseStmt):
-			child = self.child.get_dotted_string()
+			child = ':{}'.format(self.child.get_dotted_string())
 		
 		elif isinstance(self.child, StringTypes):
 			child = ':{}'.format(self.child)
