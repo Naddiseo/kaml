@@ -30,9 +30,10 @@ class TestLexer(unittest.TestCase):
 		code = '-def "#" id {}'
 		tokens = [K('def'), S('#'), I('id'), L('{'), L('}')]
 		self.assertTokens(code, tokens)
-		l = Lexer(data = code)
 		
 		for i, t in enumerate(tokens):
+			l = Lexer(data = code)
+			i += 1
 			print ("{}:{} -> {}".format(i, t, l.tok_stack))
 			self.assertEquals(T(*t), l.la(i))
 	

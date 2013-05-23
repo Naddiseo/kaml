@@ -162,25 +162,33 @@ class Lexer(object):
 		''' Look ahead n tokens 
 			Makes sure there are at least N tokens on the stack
 		'''
+		
+		if n < 1:
+			n = 1
 			
+		stack = self.tok_stack[:]
+		self.tok_stack = []
+		
 		if filter_ws:
-			get_stack = lambda: filter(lambda t: t.type != 'WS', self.tok_stack)
+			get_stack = lambda: filter(lambda t: t.type != 'WS', stack)
 		else:
-			get_stack = lambda:self.tok_stack
+			get_stack = lambda:stack
 		
 		i = j = len(get_stack())
 		while i < n:
 			t = self.token()
 			if t.type is None:
 				return None
-			self.tok_stack.insert(j, t)
-			j = len(self.tok_stack)
+			stack.insert(j, t)
+			j = len(stack)
 			
 			if filter_ws and t.type == 'WS':
 				continue
 			
 			i += 1
-			
+		
+		self.tok_stack = stack
+		
 		return get_stack()[n - 1]
 	
 	def skip(self, n):
