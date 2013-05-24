@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, division, absolute_import, print_function
 
 import os
+from kaml.astnodes import TranslationUnit
 
 __author__ = "richard"
 __created__ = "2013-05-15"
@@ -27,9 +28,9 @@ class PackageImporter(object):
 		
 		for path in self.search_paths:
 			file_path = os.path.join(*([path] + parts))
-			print("Trying to import {}".format(file_path))
-			if file_path in self.memo:
-				raise KAMLImportError("Already imported {}".format(file_path))
+#			print("Trying to import {}".format(file_path))
+#			if file_path in self.memo:
+#				raise KAMLImportError("Already imported {}".format(file_path))
 			
 			try:
 				with open(file_path) as fp:
@@ -38,7 +39,13 @@ class PackageImporter(object):
 					self.memo.add(file_path)
 					
 					p = Parser(importer_memo = self.memo, **self.parser_kwargs)
-					return p.parse(fp.read())
+					tu = p.parse(fp.read())
+					if isinstance(tu, TranslationUnit):
+						return tu.declarations
+					elif isinstance(tu, (list, tuple)):
+						return tu
+					else:
+						return tu
 			except IOError:
 				pass
 		

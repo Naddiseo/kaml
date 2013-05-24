@@ -83,12 +83,11 @@ class Parser(object):
 		return ast
 	
 	def package_import(self):
-		la = self.la()
-		if la.type == ':':
+		if self.la().type == ':':
 			self.expect(':')
 			child = self.t()
 			if child.type == '*':
-				return self.expect('*')
+				return child
 			else:
 				return UseStmt(self.shouldbe(child, 'ID'), self.package_import())
 		return None

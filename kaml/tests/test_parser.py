@@ -70,15 +70,16 @@ class TestParser(unittest.TestCase):
 		self.assertParses('-def /*inline comment */ fn(){}')
 	
 	def test_use(self):
-		self.assertTree('-use foo;', TranslationUnit(StringLiteral('foo')))
-		self.assertTree('-use foo:bar;', TranslationUnit(StringLiteral('bar')))
-		self.assertTree('-use foo:bar:baz;', TranslationUnit(StringLiteral('baz')))
-		self.assertTree('-use foo:*;', TranslationUnit(StringLiteral('foo')))
+		self.assertTree('-use foo;', TranslationUnit([StringLiteral('foo')]))
+		self.assertTree('-use foo:bar;', TranslationUnit([StringLiteral('bar')]))
+		self.assertTree('-use foo:bar:baz;', TranslationUnit([StringLiteral('baz')]))
+		self.assertTree('-use foo:*;', TranslationUnit([StringLiteral('foo')]))
 		
-		self.assertTree('-use foo;-use bar;', TranslationUnit(StringLiteral('foo'), StringLiteral('bar')))
+		self.assertTree('-use foo;-use bar;', TranslationUnit([StringLiteral('foo')], [StringLiteral('bar')]))
 		
 		self.assertNotParses('-use *;')
-		self.assertParses('-use -foo:-bar;')
+		
+		self.assertParses('-use foo:-bar;')
 	
 	def test_function_def_positional(self):
 		self.assertTree('-def fn{}', self._get_stmt_tree(None))
